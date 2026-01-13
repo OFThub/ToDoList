@@ -34,6 +34,10 @@ export default function Login() {
       alert("Giriş başarılı 🎉");
       console.log("LOGIN RESPONSE:", res.data);
 
+      // Örnek Register/Login başarılı olduğunda:
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      
       window.location.href = "/dashboard";
 
     } catch (err) {

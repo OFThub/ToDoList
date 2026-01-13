@@ -13,6 +13,8 @@ I built a real-time To-Do List application to learn:
 + REST API structure
 + React frontend integration
 + Socket.IO for real-time updates
++ Understanding CRUD operations deeply
++ Managing state between frontend and backend
 
 The main goal of this project is learning by building and understanding
 how backend and frontend communicate in a real application.
@@ -24,5 +26,11 @@ Features:
 + Project based To-Do lists
 + Real-time updates between users
 + Role and permission management
++ Creating projects for organizing tasks
++ Adding To-Do items under specific projects
++ Linking projects and tasks to authenticated users
++ Backend API endpoints for project and todo management
++ Frontend dashboard for listing and selecting projects
++ Synchronization between frontend and backend using REST APIs
 
 ######################################################################

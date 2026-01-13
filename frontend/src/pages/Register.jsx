@@ -26,6 +26,11 @@ export default function Register() {
       );
       alert("Kayıt başarılı");
       console.log(res.data);
+
+      // Örnek Register/Login başarılı olduğunda:
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      
       window.location.href = "/dashboard";
     } catch (err) {
       console.error(err.response?.data);
