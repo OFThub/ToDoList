@@ -8,19 +8,13 @@ const connectDB = require("./config/db");
 const app = express();
 const server = http.createServer(app);
 
-/* ===========================
-   SOCKET.IO
-=========================== */
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // Vite frontend
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
   },
 });
 
-/* ===========================
-   MIDDLEWARE
-=========================== */
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -35,26 +29,14 @@ app.use((req, res, next) => {
   next();
 });
 
-/* ===========================
-   DATABASE
-=========================== */
 connectDB();
 
-/* ===========================
-   ROUTES
-=========================== */
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/projects", require("./routes/project.routes"));
 app.use("/api/todos", require("./routes/todo.routes"));
 
-/* ===========================
-   SOCKET FILE
-=========================== */
 require("./socket/socket")(io);
 
-/* ===========================
-   SERVER
-=========================== */
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {

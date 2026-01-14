@@ -1,78 +1,45 @@
-import axios from "axios";
-import { useState } from "react";
+import React from "react";
+import { useLogin } from "./hooks/useLogin"; // Yolun doğru olduğundan emin olun
+import "./Auth.css";
 
-export default function Login() {
-  const [identifier, setIdentifier] = useState(""); // username veya email
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!identifier || !password) {
-      alert("Kullanıcı adı/email ve şifre boş olamaz");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        {
-          identifier,
-          password,
-        }
-      );
-
-      const { token, user } = res.data;
-
-      // LocalStorage
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      alert("Giriş başarılı 🎉");
-      console.log("LOGIN RESPONSE:", res.data);
-
-      // Örnek Register/Login başarılı olduğunda:
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      
-      window.location.href = "/dashboard";
-
-    } catch (err) {
-      console.error("LOGIN ERROR:", err.response?.data);
-      alert(err.response?.data?.message || "Giriş başarısız");
-    } finally {
-      setLoading(false);
-    }
-  };
+// Prop'u süslü parantez içinde (destructuring) alıyoruz
+export default function Login({ onLoginSuccess }) {
+  const {
+    identifier,
+    setIdentifier,
+    password,
+    setPassword,
+    loading,
+    handleSubmit,
+  } = useLogin(onLoginSuccess); // Prop'u hook'a paslıyoruz
 
   return (
-    <div style={{ maxWidth: 400, margin: "auto" }}>
-      <h2>Giriş Yap</h2>
-
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Kullanıcı adı veya Email"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          required
-        />
-
-        <input
-          type="password"
-          placeholder="Şifre"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
-        </button>
-      </form>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Giriş Yap</h2>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <input
+            type="text"
+            placeholder="Kullanıcı adı veya Email"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Şifre"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+          </button>
+        </form>
+        <div className="auth-footer">
+          Hesabın yok mu? <a href="/register">Kayıt Ol</a>
+        </div>
+      </div>
     </div>
   );
 }

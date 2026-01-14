@@ -1,199 +1,149 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useDashboard } from "./hooks/useDashboard";
+import "./Dashboard.css";
 
-export default function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [newProjectTitle, setNewProjectTitle] = useState("");
-  const [newTodoTask, setNewTodoTask] = useState("");
+export default function Dashboard({ onLogout }) { 
+  const {
+    user, projects, selectedProject, setSelectedProject,
+    newProjectTitle, setNewProjectTitle, newTodoTask, setNewTodoTask,
+    collabEmail, setCollabEmail, canWrite, setCanWrite,
+    loading, userId, isOwner, canWriteTodo,
+    createProject, deleteProject, addCollaborator, addTodo, logout,
+    renameProject // 🔥 EKSİK OLAN BUYDU: Buraya ekledik
+  } = useDashboard(onLogout);
 
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    // Token kontrolü
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-
-    const storedUser = localStorage.getItem("user");
-
-    if (!storedUser) {
-      window.location.href = "/login";
-      return;
-    }
-
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      fetchProjects();
-    } catch (err) {
-      console.error("User parse edilemedi:", err);
-      window.location.href = "/login";
-    }
-  }, []);
-
-  // Projeleri getir
-  const fetchProjects = async () => {
-    try {
-      const res = await axios.get("http://localhost:5000/api/projects", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setProjects(res.data);
-    } catch (err) {
-      console.error("Projeler alınamadı:", err.response?.data || err.message);
-    }
-  };
-
-  // Yeni proje oluştur
-  const createProject = async () => {
-    if (!newProjectTitle.trim()) return;
-
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/projects",
-        { title: newProjectTitle },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setProjects([...projects, res.data]);
-      setNewProjectTitle("");
-      alert("Proje oluşturuldu");
-    } catch (err) {
-      const msg =
-        err.response?.data?.msg ||
-        err.response?.data?.message ||
-        "Proje oluşturulamadı";
-      alert(msg);
-    }
-  };
-
-  // Todo ekle
-  const addTodo = async () => {
-    if (!newTodoTask.trim() || !selectedProject) return;
-
-    try {
-      const res = await axios.post(
-        `http://localhost:5000/api/projects/${selectedProject._id}/todos`,
-        { task: newTodoTask },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const updatedProject = res.data;
-
-      setSelectedProject(updatedProject);
-      setProjects(
-        projects.map((p) =>
-          p._id === updatedProject._id ? updatedProject : p
-        )
-      );
-
-      setNewTodoTask("");
-    } catch (err) {
-      alert("Görev eklenemedi");
-    }
-  };
-
-  const logout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
-
-  // User henüz yüklenmediyse
-  if (!user) {
-    return <p style={{ padding: 20 }}>Yükleniyor...</p>;
-  }
+  if (!user) return <p className="loading-screen">Yükleniyor...</p>;
 
   return (
-    <div style={{ padding: 20, display: "flex", gap: 40, fontFamily: "sans-serif" }}>
-      {/* SOL TARAF */}
-      <div style={{ flex: 1 }}>
-        <h1>Dashboard</h1>
-        <p>
-          Hoş geldin <b>{user.username}</b>{" "}
-          <button onClick={logout}>Çıkış Yap</button>
-        </p>
+    <div className="dashboard">
+      {/* SOL SİDEBAR */}
+      <div className="sidebar">
+        <div className="user-bar">
+          <h2>Dashboard</h2>
+          <h2>{user.username}</h2>
+          <button className="logout-btn" onClick={logout}>Çıkış</button>
+        </div>
 
-        <hr />
-
-        <h3>Projelerim</h3>
-
-        <div style={{ marginBottom: 15 }}>
+        <div className="new-project">
           <input
-            placeholder="Yeni Proje Adı"
+            placeholder="Yeni proje adı"
             value={newProjectTitle}
             onChange={(e) => setNewProjectTitle(e.target.value)}
           />
-          <button onClick={createProject}>Oluştur</button>
+          <button onClick={createProject} disabled={loading}>
+            {loading ? "..." : "Ekle"}
+          </button>
         </div>
 
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {projects.map((p) => (
-            <li
-              key={p._id}
-              onClick={() => setSelectedProject(p)}
-              style={{
-                padding: 10,
-                border: "1px solid #eee",
-                marginBottom: 5,
-                borderRadius: 5,
-                cursor: "pointer",
-                backgroundColor:
-                  selectedProject?._id === p._id ? "#e3f2fd" : "white",
-              }}
-            >
-              <b>{p.title}</b>
-              <br />
-              <small>
-                {p.owner?.username === user.username
-                  ? "⭐ Sahibi"
-                  : "👥 Katılımcı"}
-              </small>
-            </li>
-          ))}
+        <ul className="project-list">
+          {projects.map((p) => {
+            const isProjectOwner = (p.owner?._id || p.owner) === userId;
+            return (
+              <li
+                key={p._id}
+                className={`project-card ${selectedProject?._id === p._id ? "active" : ""}`}
+                onClick={() => setSelectedProject(p)}
+              >
+                <div className="project-header">
+                  <div>
+                    <div className="project-title">{p.title}</div>
+                    
+                    {/* İSİM DÜZENLEME BUTONU */}
+                    {isProjectOwner && (
+                      <button
+                        className="edit-title-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newTitle = prompt("Yeni isim:", p.title);
+                          if (newTitle && newTitle.trim() !== "") {
+                            renameProject(p._id, newTitle);
+                          }
+                        }}
+                      >
+                        ✏️ İsmi Düzenle
+                      </button>
+                    )}
+
+                    <div className="project-meta">
+                      {isProjectOwner ? "⭐ Sahibi" : "👥 Katılımcı"}
+                    </div>
+                  </div>
+                  {isProjectOwner && (
+                    <button
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProject(p._id);
+                      }}
+                    >
+                      Sil
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
-      {/* SAĞ TARAF */}
-      <div style={{ flex: 2, borderLeft: "1px solid #ccc", paddingLeft: 20 }}>
+      {/* SAĞ İÇERİK */}
+      <div className="content">
         {selectedProject ? (
           <>
-            <h2>{selectedProject.title}</h2>
-
-            <div style={{ marginBottom: 20 }}>
-              <input
-                placeholder="Yeni Görev..."
-                value={newTodoTask}
-                onChange={(e) => setNewTodoTask(e.target.value)}
-              />
-              <button onClick={addTodo}>Görev Ekle</button>
+            <div className="content-header">
+              <h3>{selectedProject.title}</h3>
             </div>
 
-            <ul>
-              {selectedProject.todos?.map((todo) => (
-                <li key={todo._id}>
-                  {todo.task}{" "}
-                  <small style={{ color: "#777" }}>
-                    {new Date(todo.createdAt).toLocaleDateString()}
-                  </small>
-                </li>
-              ))}
-            </ul>
+            {isOwner && (
+              <div className="collaborator-box">
+                <h4>Katılımcı Ekle</h4>
+                <div className="collab-inputs">
+                  <input
+                    type="email"
+                    placeholder="Kullanıcı e-posta adresi"
+                    value={collabEmail}
+                    onChange={(e) => setCollabEmail(e.target.value)}
+                  />
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={canWrite}
+                      onChange={(e) => setCanWrite(e.target.checked)}
+                    />
+                    <span>Yazma Yetkisi</span>
+                  </label>
+                  <button onClick={addCollaborator} disabled={loading}>
+                    {loading ? "Ekleniyor..." : "Ekle"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="todo-section">
+              <div className="todo-input">
+                <input
+                  placeholder="Yeni görev"
+                  value={newTodoTask}
+                  onChange={(e) => setNewTodoTask(e.target.value)}
+                />
+                <button onClick={addTodo} disabled={!canWriteTodo}>
+                  Görev Ekle
+                </button>
+              </div>
+
+              <ul className="todo-list">
+                {selectedProject.todos?.length > 0 ? (
+                  selectedProject.todos.map((t) => (
+                    <li key={t._id} className="todo-item">{t.task}</li>
+                  ))
+                ) : (
+                  <p className="no-data">Henüz görev eklenmemiş.</p>
+                )}
+              </ul>
+            </div>
           </>
         ) : (
-          <div style={{ marginTop: 100, textAlign: "center", color: "#888" }}>
-            <h3>Soldan bir proje seç</h3>
+          <div className="empty-state">
+             <p>İşlem yapmak için soldan bir proje seçin veya yeni bir tane oluşturun.</p>
           </div>
         )}
       </div>

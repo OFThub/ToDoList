@@ -15,6 +15,9 @@ I built a real-time To-Do List application to learn:
 + Socket.IO for real-time updates
 + Understanding CRUD operations deeply
 + Managing state between frontend and backend
++ Real-world authorization scenarios
++ Multi-user project management
++ Backend data relationships and access control
 
 The main goal of this project is learning by building and understanding
 how backend and frontend communicate in a real application.
@@ -32,5 +35,10 @@ Features:
 + Backend API endpoints for project and todo management
 + Frontend dashboard for listing and selecting projects
 + Synchronization between frontend and backend using REST APIs
++ Implemented full Project CRUD architecture (Create, Read, Update, Delete)
++ Added ability to invite/add participants to projects
++ Participants have limited access based on role
++ Improved data modeling between Projects, Users, and To-Do items
++ Strengthened authorization logic to ensure secure access to project resources
 
 ######################################################################

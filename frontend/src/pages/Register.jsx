@@ -1,49 +1,49 @@
-import { useState } from "react";
-import axios from "axios";
+import React from "react";
+import { useRegister } from "./hooks/useRegister";
+import "./Auth.css";
 
-export default function Register() {
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: ""
-  });
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/register",
-        form,
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      );
-      alert("Kayıt başarılı");
-      console.log(res.data);
-
-      // Örnek Register/Login başarılı olduğunda:
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      
-      window.location.href = "/dashboard";
-    } catch (err) {
-      console.error(err.response?.data);
-      alert(err.response?.data?.message || "Kayıt olurken hata oluştu");
-    }
-  };
+export default function Register(onRegisterSuccess) {
+  const { form, loading, handleChange, handleSubmit } = useRegister(onRegisterSuccess);
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input name="username" placeholder="Kullanıcı Adı" onChange={handleChange} />
-      <input name="email" placeholder="Email" onChange={handleChange} />
-      <input name="password" type="password" placeholder="Şifre" onChange={handleChange} />
-      <button type="submit">Kayıt Ol</button>
-    </form>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Yeni Hesap Oluştur</h2>
+        
+        <form onSubmit={handleSubmit} className="auth-form">
+          <input 
+            name="username" 
+            placeholder="Kullanıcı Adı" 
+            value={form.username}
+            onChange={handleChange} 
+            required 
+          />
+          <input 
+            name="email" 
+            type="email"
+            placeholder="Email" 
+            value={form.email}
+            onChange={handleChange} 
+            required 
+          />
+          <input 
+            name="password" 
+            type="password" 
+            placeholder="Şifre" 
+            value={form.password}
+            onChange={handleChange} 
+            required 
+          />
+          
+          <button type="submit" disabled={loading}>
+            {loading ? "Kaydediliyor..." : "Kayıt Ol"}
+          </button>
+        </form>
+        
+        <div className="auth-footer">
+          Zaten hesabınız var mı? <a href="/login">Giriş Yap</a>
+        </div>
+      </div>
+    </div>
   );
 }

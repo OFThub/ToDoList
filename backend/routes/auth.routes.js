@@ -10,8 +10,6 @@ const router = express.Router();
 ===================== */
 router.post("/register", async (req, res) => {
   try {
-    console.log("REGISTER BODY:", req.body);
-
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
@@ -54,8 +52,6 @@ router.post("/register", async (req, res) => {
 ===================== */
 router.post("/login", async (req, res) => {
   try {
-    console.log("LOGIN BODY:", req.body);
-
     const { identifier, password } = req.body;
     // identifier = username veya email
 
