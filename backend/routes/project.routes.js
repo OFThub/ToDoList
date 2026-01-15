@@ -3,6 +3,7 @@ const router = express.Router();
 const Project = require('../models/Project');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const permission = require('../middleware/permission');
 
 //////////////////////////////////////////
 
@@ -69,6 +70,23 @@ router.post('/:id/collaborators', auth, async (req, res) => {
 });
 
 /////////////////////
+
+router.post("/:projectId/groups", auth, permission("write"), async (req, res) => {
+  try {
+    const { groupName } = req.body;
+    const project = await Project.findById(req.params.projectId);
+    
+    if (project.groups.includes(groupName)) {
+      return res.status(400).json({ msg: "Bu grup zaten mevcut" });
+    }
+
+    project.groups.push(groupName);
+    await project.save();
+    res.json(project);
+  } catch (err) {
+    res.status(500).send("Sunucu hatası");
+  }
+});
 
 // TODO EKLE (Yetki: Sahibi veya canWrite: true olanlar)
 router.post('/:id/todos', auth, async (req, res) => {

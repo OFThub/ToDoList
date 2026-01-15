@@ -36,9 +36,11 @@ Features:
 + Frontend dashboard for listing and selecting projects
 + Synchronization between frontend and backend using REST APIs
 + Implemented full Project CRUD architecture (Create, Read, Update, Delete)
++ Implemented full To Do CRUD architecture (Create, Read, Update, Delete)
 + Added ability to invite/add participants to projects
 + Participants have limited access based on role
 + Improved data modeling between Projects, Users, and To-Do items
 + Strengthened authorization logic to ensure secure access to project resources
++ Added states (Planing - Ongoing - Done)
 
 ######################################################################

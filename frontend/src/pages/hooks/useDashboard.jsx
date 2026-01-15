@@ -10,6 +10,7 @@ export const useDashboard = (onLogout) => {
   const [newTodoTask, setNewTodoTask] = useState("");
   const [collabEmail, setCollabEmail] = useState("");
   const [canWrite, setCanWrite] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -56,7 +57,7 @@ export const useDashboard = (onLogout) => {
     try {
       const res = await axios.post(
         `http://localhost:5000/api/projects/${selectedProject._id}/collaborators`,
-        { email: collabEmail, canWrite },
+        { email: collabEmail, canWrite, canDelete},
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // Hem seçili projeyi hem de genel listeyi güncelle
@@ -76,24 +77,80 @@ export const useDashboard = (onLogout) => {
 
 /////////////////////
 
-  // Görev (Todo) ekleme
+  // useDashboard.js içindeki addTodo fonksiyonu
   const addTodo = async () => {
     if (!newTodoTask.trim()) return;
+    
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/projects/${selectedProject._id}/todos`,
+        `http://localhost:5000/api/todos/${selectedProject._id}`, 
         { task: newTodoTask },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSelectedProject(res.data);
-      setProjects((prev) =>
-        prev.map((p) => (p._id === res.data._id ? res.data : p))
+      
+      const addedTodo = res.data;
+
+      // 1. Seçili projeyi anında güncelle (Ekranda hemen görünmesi için)
+      setSelectedProject(prev => ({
+        ...prev,
+        todos: [addedTodo, ...prev.todos]
+      }));
+
+      // 2. Ana projeler listesini güncelle (Projeler arası geçişte kaybolmaması için)
+      setProjects(prevProjects => 
+        prevProjects.map(p => 
+          p._id === selectedProject._id 
+            ? { ...p, todos: [addedTodo, ...p.todos] } 
+            : p
+        )
       );
+
       setNewTodoTask("");
     } catch (err) {
+      console.error("Ekleme hatası:", err.response?.data);
       alert("Görev eklenemedi.");
     }
   };
+
+/////////////////////
+
+  // Görevi Üstlenme (Join/Assign) - GÜNCELLENDİ
+  const toggleTodoAssign = async (todoId) => {
+    try {
+      const res = await axios.post(
+        `http://localhost:5000/api/todos/${selectedProject._id}/${todoId}/assign`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const updatedTodo = res.data;
+
+      setSelectedProject(prev => ({
+        ...prev,
+        todos: prev.todos.map(t => t._id === todoId ? updatedTodo : t)
+      }));
+    } catch (err) {
+      alert("Görev üstlenilemedi.");
+    }
+  };
+
+  // useDashboard.js içine eklenecekler:
+
+const addGroup = async (groupName) => {
+  if (!groupName) return;
+  try {
+    const res = await axios.post(
+      `http://localhost:5000/api/projects/${selectedProject._id}/groups`,
+      { groupName },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setSelectedProject(res.data);
+  } catch (err) {
+    alert("Grup eklenemedi");
+  }
+};
+
+
 
 //////////////////////////////////////////
 
@@ -113,6 +170,26 @@ export const useDashboard = (onLogout) => {
       const collabId = c.user?._id || c.user;
       return collabId === userId && c.permissions?.canWrite;
     });
+
+  const canDeleteTodo =
+    isOwner ||
+    selectedProject?.collaborators?.some((c) => {
+      const collabId = c.user?._id || c.user;
+      return collabId.toString() === userId?.toString() && c.permissions?.canDelete;
+    });
+  const onDragStart = (e, todoId) => {
+    e.dataTransfer.setData("todoId", todoId);
+  };
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const onDrop = (e, columnId, groupName = "") => {
+    const todoId = e.dataTransfer.getData("todoId");
+    // Backend'e hem yeni durumu (status) hem de yeni grubu (group) gönderiyoruz
+    updateTodo(todoId, { status: columnId, group: groupName });
+  };
 
 /////////////////////
 
@@ -162,7 +239,6 @@ export const useDashboard = (onLogout) => {
 //////////////////////////////////////////
 
   const renameProject = async (projectId, newTitle) => {
-    // 1. Token Kontrolü (Hata buradan kaynaklanıyor olabilir)
     const currentToken = localStorage.getItem("token"); 
     
     if (!currentToken) {
@@ -181,7 +257,6 @@ export const useDashboard = (onLogout) => {
         }
       );
 
-      // Sidebar ve Seçili Proje State Güncellemeleri
       setProjects((prev) =>
         prev.map((p) => (p._id === projectId ? res.data : p))
       );
@@ -193,10 +268,69 @@ export const useDashboard = (onLogout) => {
       alert("Proje adı başarıyla değiştirildi.");
     } catch (err) {
       console.error("Rename error:", err);
-      // Backend'den gelen hata mesajını göster
       alert(err.response?.data?.msg || "İsim değiştirilemedi.");
     }
   };
+
+/////////////////////
+
+  const updateTodo = async (todoId, updates) => {
+    try {
+      // Backend "status" beklediği için objeyi ona göre gönderiyoruz
+      await axios.patch(
+        `http://localhost:5000/api/todos/${selectedProject._id}/${todoId}`,
+        { status: updates.status }, // "newStatus" değil, "status" gönderin
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Local State Güncelleme
+      const updatedTodos = selectedProject.todos.map(t => 
+        t._id === todoId ? { ...t, status: updates.status } : t
+      );
+
+      setSelectedProject({ ...selectedProject, todos: updatedTodos });
+      setProjects(prev => prev.map(p => 
+        p._id === selectedProject._id ? { ...p, todos: updatedTodos } : p
+      ));
+      
+    } catch (err) {
+      console.error("Güncelleme hatası", err);
+    }
+  };
+
+/////////////////////
+
+const renameTodo = async (todoId, newTask) => {
+  if (!newTask || !newTask.trim()) return;
+  try {
+    const res = await axios.patch(
+      `http://localhost:5000/api/todos/${selectedProject._id}/${todoId}/rename`,
+      { newTask: newTask },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const updatedTodo = res.data;
+
+    // Sadece seçili projedeki ilgili todoyu güncelle
+    setSelectedProject((prev) => ({
+      ...prev,
+      todos: prev.todos.map((t) => (t._id === todoId ? updatedTodo : t)),
+    }));
+
+    // Genel projeler listesindeki veriyi de senkronize et
+    setProjects((prev) =>
+      prev.map((p) =>
+        p._id === selectedProject._id
+          ? { ...p, todos: p.todos.map((t) => (t._id === todoId ? updatedTodo : t)) }
+          : p
+      )
+    );
+  } catch (err) {
+    console.error("Todo Rename hatası:", err.response?.data);
+    alert(err.response?.data?.msg || "Görev adı değiştirilemedi.");
+  }
+};
+
+// return kısmına renameProject'i eklemeyi unutmayın!
 
 //////////////////////////////////////////
 
@@ -215,6 +349,40 @@ export const useDashboard = (onLogout) => {
       if (selectedProject?._id === projectId) setSelectedProject(null);
     } catch (err) {
       alert("Silme işlemi başarısız.");
+    }
+  };
+
+/////////////////////
+
+  // Görev Silme - GÜNCELLENDİ
+  const deleteTodo = async (todoId) => {
+    if (!window.confirm("Bu görevi silmek istediğinize emin misiniz?")) return;
+    
+    try {
+      // URL: BaseURL + ProjectID + TodoID (Aradaki fazladan /todos/ kaldırıldı)
+      await axios.delete(
+        `http://localhost:5000/api/todos/${selectedProject._id}/${todoId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // UI Güncelleme: Seçili projeden kaldır
+      setSelectedProject((prev) => ({
+        ...prev,
+        todos: prev.todos.filter((t) => t._id !== todoId)
+      }));
+
+      // UI Güncelleme: Genel projeler listesinden kaldır
+      setProjects((prev) =>
+        prev.map((p) =>
+          p._id === selectedProject._id
+            ? { ...p, todos: p.todos.filter((t) => t._id !== todoId) }
+            : p
+        )
+      );
+
+    } catch (err) {
+      console.error("Silme hatası detayı:", err.response?.data);
+      alert("Silme hatası: " + (err.response?.data?.msg || "Yetki yetersiz veya sunucu hatası"));
     }
   };
 
@@ -243,5 +411,13 @@ export const useDashboard = (onLogout) => {
     addTodo,
     logout,
     renameProject,
+    toggleTodoAssign,
+    deleteTodo,
+    canDeleteTodo,
+    renameTodo,
+    onDragStart,
+    onDragOver,
+    onDrop,
+    updateTodo,
   };
 };

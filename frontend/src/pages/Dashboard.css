@@ -10,7 +10,6 @@ body {
   padding: 24px;
 }
 
-/* SOL PANEL */
 .sidebar {
   width: 320px;
   background: #ffffff;
@@ -38,7 +37,6 @@ body {
   margin: 16px 0;
 }
 
-/* PROJE KARTLARI */
 .project-list {
   list-style: none;
   padding: 0;
@@ -91,7 +89,6 @@ body {
   cursor: pointer;
 }
 
-/* SAĞ PANEL */
 .content {
   flex: 1;
   background: #ffffff;
@@ -100,7 +97,6 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* KATILIMCI */
 .collaborator-box {
   background: #f8f9fa;
   padding: 16px;
@@ -108,7 +104,6 @@ body {
   margin-bottom: 20px;
 }
 
-/* TODO */
 .todo-input {
   display: flex;
   gap: 8px;
@@ -136,11 +131,10 @@ button:disabled {
   margin-top: 120px;
 }
 
-/* Düzenle Butonu Temel Stili */
 .edit-title-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Hafif belirgin sınır */
-  color: #a0aec0; /* Soft gri tonu */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #a0aec0;
   padding: 4px 8px;
   border-radius: 6px;
   cursor: pointer;
@@ -152,20 +146,17 @@ button:disabled {
   margin-top: 4px;
 }
 
-/* Üzerine gelince (Hover) */
 .edit-title-btn:hover {
-  background-color: rgba(66, 153, 225, 0.15); /* Hafif mavi arka plan */
-  color: #4299e1; /* Canlı mavi yazı */
+  background-color: rgba(66, 153, 225, 0.15);
+  color: #4299e1;
   border-color: #4299e1;
-  transform: translateY(-1px); /* Küçük bir zıplama efekti */
+  transform: translateY(-1px);
 }
 
-/* Tıklama efekti */
 .edit-title-btn:active {
   transform: scale(0.95);
 }
 
-/* Proje kartı aktifse butonun rengini uyumlu yap */
 .project-card.active .edit-title-btn {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.4);
@@ -173,4 +164,88 @@ button:disabled {
 
 .project-card.active .edit-title-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Ana Kanban Alanı */
+.kanban-board {
+  display: flex; /* Sütunları yan yana dizer */
+  gap: 20px;
+  padding: 20px 10px;
+  align-items: flex-start;
+  overflow-x: auto; /* Ekran daralırsa yatay kaydırma ekler */
+  min-height: 70vh;
+}
+
+/* Her Bir Sütun (Planlanan, Yapılıyor, Biten) */
+.kanban-column {
+  background-color: #ebecf0; /* Klasik Kanban gri rengi */
+  border-radius: 8px;
+  min-width: 320px; /* Sütun genişliği */
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.kanban-column h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #172b4d;
+  font-size: 1.1rem;
+}
+
+/* Kartların İçinde Durduğu Konteynır */
+.todo-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Tek Bir Görev Kartı */
+.todo-card {
+  background: white;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  transition: transform 0.1s ease;
+}
+
+.todo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Katılımcı Avatarları */
+.assignees {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  background-color: #4a90e2;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.todo-card {
+  cursor: grab;
+}
+
+.todo-card:active {
+  cursor: grabbing;
+}
+
+.kanban-column {
+  transition: background-color 0.2s ease;
+  min-height: 400px; /* Boş olsa bile üzerine bırakabilmek için */
 }
