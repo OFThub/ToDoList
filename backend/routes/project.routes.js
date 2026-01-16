@@ -1,186 +1,123 @@
 const express = require('express');
 const router = express.Router();
 const Project = require('../models/Project');
+const Todo = require('../models/Todo');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
+
+// Middleware'ler
+const auth = require('../middleware/auth'); // 'protect' yerine 'auth' kullanıyorsun
 const permission = require('../middleware/permission');
 
-//////////////////////////////////////////
+// ==========================================
+// 1. PROJE OLUŞTURMA & LİSTELEME
+// ==========================================
 
-//  CREATE
+// @route   POST /api/v1/projects
+router.post('/', auth, async (req, res, next) => {
+    try {
+        // Frontend'den gelen 'color' bilgisini de alıyoruz
+        const { title, description, category, visibility, color } = req.body;
+        
+        // Basit validasyon: Title zorunlu
+        if (!title) {
+            return res.status(400).json({ success: false, msg: 'Lütfen bir proje başlığı girin' });
+        }
 
-//////////////////////////////////////////
+        const project = await Project.create({
+            title,
+            description: description || '',
+            category: category || 'Genel',
+            visibility: visibility || 'private',
+            color: color || '#6366f1', // Dashboard'dan gelen renk
+            owner: req.user.id,
+            customStatuses: [
+                { label: "Todo", color: "#808080" },
+                { label: "In Progress", color: "#007bff" },
+                { label: "Done", color: "#28a745" }
+            ]
+        });
 
-// Yeni Proje Oluştur
-router.post('/', auth, async (req, res) => {
-    const project = new Project({ title: req.body.title, owner: req.user.id });
-    await project.save();
-    res.json(project);
+        res.status(201).json({ success: true, data: project });
+    } catch (err) { 
+        console.error("Proje Oluşturma Hatası:", err);
+        next(err); 
+    }
 });
 
-/////////////////////
-
-// PROJEYE KULLANICI VE YETKİ EKLE
-router.post('/:id/collaborators', auth, async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ msg: 'Proje bulunamadı' });
-
-    if (project.owner.toString() !== req.user.id) {
-      return res.status(403).json({ msg: 'Yetkiniz yok' });
-    }
-
-    const { email, canWrite, canDelete } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ msg: 'Bu mail ile kullanıcı bulunamadı' });
-    }
-
-    if (user._id.toString() === project.owner.toString()) {
-      return res.status(400).json({ msg: 'Proje sahibi zaten ekli' });
-    }
-
-    const alreadyAdded = project.collaborators.some(
-      c => c.user?.toString() === user._id.toString()
-    );
-    if (alreadyAdded) {
-      return res.status(400).json({ msg: 'Kullanıcı zaten katılımcı' });
-    }
-
-    project.collaborators.push({
-    user: user._id,
-    permissions: {
-        canWrite: Boolean(canWrite),
-        canDelete: Boolean(canDelete)
-    }
-    });
-
-    await project.save();
-
-    const updatedProject = await Project.findById(project._id)
-    .populate('owner', 'username email')
-    .populate('collaborators.user', 'username email');
-
-    res.json(updatedProject);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Sunucu hatası' });
-  }
-});
-
-/////////////////////
-
-router.post("/:projectId/groups", auth, permission("write"), async (req, res) => {
-  try {
-    const { groupName } = req.body;
-    const project = await Project.findById(req.params.projectId);
-    
-    if (project.groups.includes(groupName)) {
-      return res.status(400).json({ msg: "Bu grup zaten mevcut" });
-    }
-
-    project.groups.push(groupName);
-    await project.save();
-    res.json(project);
-  } catch (err) {
-    res.status(500).send("Sunucu hatası");
-  }
-});
-
-// TODO EKLE (Yetki: Sahibi veya canWrite: true olanlar)
-router.post('/:id/todos', auth, async (req, res) => {
-    const project = await Project.findById(req.params.id);
-    const collab = project.collaborators.find(c => c.user.toString() === req.user.id);
-    const hasWriteAuth = project.owner.toString() === req.user.id || (collab && collab.permissions.canWrite);
-
-    if (!hasWriteAuth) return res.status(403).json({ msg: 'Yazma yetkiniz yok' });
-
-    project.todos.push({ task: req.body.task });
-    await project.save();
-    res.json(project);
-});
-
-//////////////////////////////////////////
-
-//  READ
-
-//////////////////////////////////////////
-
-// Sadece kullanıcının dahil olduğu projeleri getir
-router.get('/', auth, async (req, res) => {
+// @route   GET /api/v1/projects
+router.get('/', auth, async (req, res, next) => {
     try {
         const projects = await Project.find({
             $or: [
                 { owner: req.user.id },
-                { 'collaborators.user': req.user.id }
+                { 'collaborators.user': req.user.id },
+                { visibility: 'public' }
             ]
-        }).populate('owner', 'username').populate('collaborators.user', 'username');
-        res.json(projects);
-    } catch (err) {
-        res.status(500).send('Hata');
-    }
+        })
+        .populate('owner', 'username profile.avatar')
+        .sort('-createdAt');
+
+        res.json({ success: true, count: projects.length, data: projects });
+    } catch (err) { next(err); }
 });
 
-//////////////////////////////////////////
+// ==========================================
+// 2. PROJE DETAYLARI & GÖREVLER
+// ==========================================
 
-//  UPDATE
-
-//////////////////////////////////////////
-
-// PROJE ADINI GÜNCELLE (RENAME)
-router.patch('/:id/rename', auth, async (req, res) => {
+// GET /api/v1/projects/:projectId
+router.get('/:projectId', auth, permission('read'), async (req, res, next) => {
     try {
-        const { title } = req.body;
-        if (!title) return res.status(400).json({ msg: 'Başlık gerekli' });
-
-        const project = await Project.findById(req.params.id);
-        if (!project) return res.status(404).json({ msg: 'Proje bulunamadı' });
-
-        // Yetki kontrolü
-        if (project.owner.toString() !== req.user.id) {
-            return res.status(403).json({ msg: 'Sadece sahip isim değiştirebilir' });
-        }
-
-        project.title = title;
-        await project.save();
-
-        const updatedProject = await Project.findById(project._id)
-            .populate('owner', 'username')
-            .populate('collaborators.user', 'username');
-
-        res.json(updatedProject);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ msg: 'Sunucu hatası' });
-    }
-});
-
-//////////////////////////////////////////
-
-//  DELETE
-
-//////////////////////////////////////////
-
-// TODO SİL (Yetki: Sahibi veya canDelete: true olanlar)
-router.delete('/:id', auth, async (req, res) => {
-    try {
-        const project = await Project.findById(req.params.id);
+        // Eğer permission middleware'i req.project'i setlemiyorsa buradan tekrar bulalım
+        let project = req.project;
         
-        if (!project) return res.status(404).json({ msg: 'Proje bulunamadı' });
-
-        // Güvenlik: Sadece proje sahibi silebilir
-        if (project.owner.toString() !== req.user.id) {
-            return res.status(403).json({ msg: 'Bu projeyi silme yetkiniz yok (Sadece sahip silebilir)' });
+        if (!project) {
+            project = await Project.findById(req.params.projectId).populate('owner', 'username');
         }
 
-        await Project.findByIdAndDelete(req.params.id);
-        res.json({ msg: 'Proje başarıyla silindi' });
-    } catch (err) {
-        res.status(500).send('Sunucu hatası');
-    }
+        if (!project) {
+            return res.status(404).json({ success: false, msg: 'Proje bulunamadı' });
+        }
+
+        const tasks = await Todo.find({ project: req.params.projectId })
+            .populate('assignees', 'username profile.avatar')
+            .sort('priority');
+
+        res.json({ 
+            success: true, 
+            data: project, // Frontend 'data' veya 'project' bekliyor olabilir, ikisini de kapsayalım
+            project: project, 
+            tasks: tasks 
+        });
+    } catch (err) { next(err); }
 });
 
-//////////////////////////////////////////
+// Görev Ekleme
+router.post('/:projectId/tasks', auth, permission('write'), async (req, res, next) => {
+    try {
+        const { task, description, priority, dueDate, assignees } = req.body;
+
+        const newTask = await Todo.create({
+            project: req.params.projectId,
+            task,
+            description,
+            priority,
+            dueDate,
+            assignees,
+            createdBy: req.user.id
+        });
+
+        res.status(201).json({ success: true, data: newTask });
+    } catch (err) { next(err); }
+});
+
+// Proje Silme
+router.delete('/:projectId', auth, permission('delete'), async (req, res, next) => {
+    try {
+        await Todo.deleteMany({ project: req.params.projectId });
+        await Project.findByIdAndDelete(req.params.projectId);
+        res.json({ success: true, msg: 'Proje ve görevler silindi' });
+    } catch (err) { next(err); }
+});
 
 module.exports = router;

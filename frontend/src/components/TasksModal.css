@@ -1,0 +1,125 @@
+/* Modal Arka Planı */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Modal Kutusu */
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    position: relative;
+    animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    margin: 0;
+}
+
+.close-btn {
+    background: #f1f5f9;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.close-btn:hover {
+    background: #e2e8f0;
+}
+
+/* Form Elemanları */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #475569;
+    font-size: 0.9rem;
+}
+
+.form-group input, 
+.form-group textarea, 
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Butonlar */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn-primary {
+    background: #6366f1;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}

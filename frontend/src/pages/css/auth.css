@@ -1,0 +1,132 @@
+/* Auth Sayfası Genel Konteyner */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-main) 0%, #eef2ff 100%);
+  padding: 1.5rem;
+}
+
+/* Giriş/Kayıt Kartı */
+.auth-card {
+  background: var(--bg-card);
+  width: 100%;
+  max-width: 440px;
+  padding: 2.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-color);
+}
+
+/* Başlık Alanı */
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-header h2 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.025em;
+  margin-bottom: 0.5rem;
+}
+
+.auth-header p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Form Elemanları */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 0.6rem;
+  border: 1.5px solid var(--border-color);
+  background-color: #fff;
+  color: var(--text-main);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+/* Buton Stili */
+.btn-primary {
+  margin-top: 0.5rem;
+  padding: 0.85rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Alt Kısım Yönlendirme Linki */
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.925rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-footer a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-footer a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Giriş Animasyonu */
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}

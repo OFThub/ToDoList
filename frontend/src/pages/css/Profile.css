@@ -1,0 +1,118 @@
+.profile-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.profile-header {
+  margin-bottom: 2.5rem;
+}
+
+.profile-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.profile-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Sol Kart */
+.profile-card {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.profile-avatar-large {
+  width: 100px;
+  height: 100px;
+  background: var(--primary);
+  color: white;
+  font-size: 2.5rem;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+.profile-card-info h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.profile-card-info p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* Sağ Form Alanı */
+.profile-form-area {
+  padding: 2.5rem !important;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.form-group input, 
+.form-group textarea {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.form-group input:focus, 
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-actions {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  text-align: right;
+}
+
+.btn-save {
+  background: var(--primary);
+  color: white;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-save:hover {
+  background: var(--primary-hover);
+}
+
+@media (max-width: 850px) {
+  .profile-container {
+    grid-template-columns: 1fr;
+  }
+}
