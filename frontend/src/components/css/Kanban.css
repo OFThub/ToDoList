@@ -1,0 +1,115 @@
+/* kanban.css */
+.kanban-wrapper {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  overflow-x: auto;
+  align-items: flex-start;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+.kanban-column {
+  background: #ebedf0;
+  border-radius: 10px;
+  padding: 15px;
+  min-width: 300px;
+  max-width: 300px;
+  min-height: 400px;
+  transition: background-color 0.2s ease;
+}
+
+.kanban-column.dragging-over {
+  background-color: #dfe1e6;
+}
+
+.column-header {
+  margin-bottom: 15px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #172b4d;
+}
+
+.task-card {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  transition: transform 0.1s ease;
+  border-left: 5px solid #ccc; /* Varsayılan kenarlık */
+}
+
+.task-card.is-dragging {
+  box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+  transform: rotate(2deg);
+}
+
+/* Kanban.css içine ekleyebilirsin */
+.user-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5e6c84;
+  background: #f4f5f7;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.task-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+}
+
+.priority-badge {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Öncelik metin renkleri */
+.priority-badge.low { color: #27ae60; }
+.priority-badge.medium { color: #f1c40f; }
+.priority-badge.high { color: #e67e22; }
+.priority-badge.urgent { color: #e74c3c; }
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+  opacity: 0.7;
+}
+
+/* Öncelik Renkleri */
+.task-card.priority-low { border-left-color: #2ecc71; }      /* Yeşil */
+.task-card.priority-medium { border-left-color: #f1c40f; }   /* Sarı */
+.task-card.priority-high { border-left-color: #e67e22; }     /* Turuncu */
+.task-card.priority-urgent { border-left-color: #e74c3c; }   /* Kırmızı */
+
+.task-header {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.task-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+.task-actions button:hover {
+  opacity: 1;
+}

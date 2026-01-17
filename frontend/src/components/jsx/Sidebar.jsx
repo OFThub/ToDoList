@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import "./Sidebar.css";
+import { useAuth } from "../../contexts/AuthContext";
+import "../css/Sidebar.css";
 
 export default function Sidebar({ isOpen, onClose }) {
   const { user } = useAuth();

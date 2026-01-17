@@ -35,14 +35,22 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// CORS Yapılandırması: Frontend'in API'ye erişimine izin verir.
 const corsOptions = {
   origin: process.env.CLIENT_URL || "http://localhost:5173",
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-  credentials: true, // Token/Cookie bazlı işlemler için zorunlu
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Cache-Control",
+    "Pragma"
+  ],
+  exposedHeaders: ["Cache-Control"],
+  credentials: true,
   optionsSuccessStatus: 204
 };
+
 app.use(cors(corsOptions));
 
 app.use(compression()); // Yanıtları sıkıştırır

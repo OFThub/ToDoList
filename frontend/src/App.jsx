@@ -11,9 +11,9 @@ import Profile from "./pages/jsx/Profile";
 import HomePage from "./pages/jsx/HomePage";
 
 // Bileşenler
-import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
-import Sidebar from "./components/Sidebar";
+import ProtectedRoute from "./components/jsx/ProtectedRoute";
+import Navbar from "./components/jsx/Navbar";
+import Sidebar from "./components/jsx/Sidebar";
 
 // CSS (Layout için gerekli geçişleri buraya veya App.css'e ekleyin)
 import "./App.css";

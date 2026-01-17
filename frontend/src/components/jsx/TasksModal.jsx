@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./TasksModal.css";
+import "../css/TasksModal.css";
 
 export default function TaskModal({ isOpen, onClose, onSubmit, project }) {
   const [formData, setFormData] = useState({

@@ -1,8 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "react-hot-toast";
-import "./Navbar.css";
+import "../css/navbar.css";
 
 export default function Navbar({ onToggleSidebar }) {
   const { setUser } = useAuth();

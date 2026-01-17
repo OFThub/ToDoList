@@ -5,29 +5,26 @@ const auth = require("../middleware/auth");
 
 /**
  * @route   GET /api/v1/users/search
- * @desc    Kullanıcıları e-posta veya kullanıcı adına göre ara (Projeye ortak eklemek için)
+ * @desc    Kullanıcıları e-posta veya kullanıcı adına göre ara
  */
 router.get("/search", auth, async (req, res, next) => {
     try {
         const query = req.query.q;
         
-        // Boş arama yapılmasını engelle
-        if (!query || query.length < 2) {
-            return res.status(400).json({ success: false, msg: "Lütfen en az 2 karakter giriniz." });
-        }
+        // Eğer sorgu boşsa tüm kullanıcıları getir (Kanban eşleşmesi için gerekebilir)
+        // Ancak güvenlik için kendisi hariç tutulur.
+        let filter = { _id: { $ne: req.user.id } };
 
-        // Arama kriterleri:
-        // 1. Kendisi hariç ($ne: req.user.id)
-        // 2. Email veya Username içinde geçen kelime (case-insensitive regex)
-        const users = await User.find({
-            _id: { $ne: req.user.id },
-            $or: [
+        if (query && query.length >= 2) {
+            filter.$or = [
                 { email: { $regex: query, $options: "i" } },
                 { username: { $regex: query, $options: "i" } }
-            ]
-        })
-        .select("username email profile.avatar profile.firstName profile.lastName")
-        .limit(10); // Performans için sınırı tut
+            ];
+        }
+
+        const users = await User.find(filter)
+            .select("username email profile.avatar profile.firstName profile.lastName")
+            .limit(20); 
 
         res.json({ success: true, data: users });
     } catch (err) {
@@ -49,6 +46,24 @@ router.get("/me", auth, async (req, res, next) => {
 });
 
 /**
+ * @route   GET /api/v1/users/:id
+ * @desc    ID ile kullanıcı getir (DÜZELTİLDİ: Username artık geliyor)
+ */
+router.get("/:id", auth, async (req, res, next) => {
+    try {
+        // HATA DÜZELTME: "-username" ifadesi kullanıcı adını gizliyordu, "username" olarak güncellendi.
+        const user = await User.findById(req.params.id).select("username profile.avatar");
+        
+        if (!user) {
+            return res.status(404).json({ success: false, msg: "Kullanıcı bulunamadı" });
+        }
+        res.json({ success: true, data: user });
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
  * @route   PUT /api/v1/users/profile
  * @desc    Profil bilgilerini güncelle
  */
@@ -56,14 +71,13 @@ router.put("/profile", auth, async (req, res, next) => {
     try {
         const { firstName, lastName, bio, jobTitle, theme } = req.body;
 
-        // Güncellenecek alanları belirle
-        const updateFields = {
-            "profile.firstName": firstName,
-            "profile.lastName": lastName,
-            "profile.bio": bio,
-            "profile.jobTitle": jobTitle,
-            "settings.theme": theme
-        };
+        // undefined gelme ihtimaline karşı kontrollü atama
+        const updateFields = {};
+        if (firstName) updateFields["profile.firstName"] = firstName;
+        if (lastName) updateFields["profile.lastName"] = lastName;
+        if (bio) updateFields["profile.bio"] = bio;
+        if (jobTitle) updateFields["profile.jobTitle"] = jobTitle;
+        if (theme) updateFields["settings.theme"] = theme;
 
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id,
