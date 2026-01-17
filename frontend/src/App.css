@@ -1,164 +1,379 @@
 /* ==========================================
-   MODERN DEĞİŞKENLER & TEMEL SIFIRLAMA
+   APP LAYOUT (App.jsx)
    ========================================== */
-:root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --border-color: #e2e8f0;
-  
-  font-family: 'Inter', system-ui, sans-serif;
-  line-height: 1.6;
-}
-
-[data-theme='dark'] {
-  --bg-main: #0f172a;
-  --bg-card: #1e293b;
-  --text-main: #f1f5f9;
-  --text-muted: #94a3b8;
-  --border-color: #334155;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  min-height: 100vh;
-}
-
-/* ==========================================
-   ANA UYGULAMA DÜZENİ (LAYOUT) - DÜZELTİLDİ
-   ========================================== */
-.app-layout {
-  display: flex;
-  width: 100%;       /* Tüm genişliği kapla */
-  min-height: 100vh;
-  background-color: var(--bg-main);
-}
-
-/* Yan Menü */
-.sidebar-container {
-  width: 260px;
-  min-width: 260px;  /* Daralmasını engelle */
-  background-color: var(--bg-card);
-  border-right: 1px solid var(--border-color);
-  height: 100vh;
-  position: sticky;
-  top: 0;
-}
-
-/* Sağ Taraf: Navbar + İçerik */
-.main-wrapper {
-  flex: 1;           /* Kalan tüm boşluğu doldurur */
-  display: flex;
-  flex-direction: column;
-  min-width: 0;      /* Flex içindeki taşmaları önlemek için kritik */
-}
-
-/* Üst Menü */
-.navbar-container {
-  height: 64px;
-  width: 100%;       /* Sağa kadar uzanmasını sağlar */
-  background-color: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  padding: 0 2rem;
-  justify-content: space-between;
-}
-
-/* Sayfa İçeriği Alanı */
-.content-area {
-  padding: 2rem;
-  flex: 1;           /* Dikeyde tüm boşluğu kapla */
-  overflow-y: auto;
-  width: 100%;       /* Yatayda tüm boşluğu kapla */
-}
-
-/* Izgara Yapısı (Kartların yan yana dizilmesi için) */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  width: 100%;
-}
-
-/* ==========================================
-   BİLEŞENLER (Kartlar, Butonlar vb.)
-   ========================================== */
-.task-card {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  transition: all 0.2s ease;
-}
-
-.task-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-}
-
-/* Animasyonlar */
-.fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ==========================================
-   MOBİL UYUMLULUK
-   ========================================== */
-@media (max-width: 768px) {
-  .sidebar-container {
-    display: none; 
-  }
-  .navbar-container {
-    padding: 0 1rem;
-  }
-  .content-area {
-    padding: 1rem;
-  }
-}
 
 .app-container {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-main);
+  background: var(--bg-primary);
+  position: relative;
 }
 
 .main-content-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  transition: margin-left 0.3s ease-in-out; /* Kayma efekti */
+  transition: margin-left var(--transition-base);
+  min-height: 100vh;
+  position: relative;
 }
 
-/* Masaüstü: Sidebar açıkken içeriği sağa it */
-@media (min-width: 1025px) {
-  .main-content-wrapper.sidebar-open {
-    margin-left: var(--sidebar-width); /* Sidebar.css'deki genişlik ile aynı olmalı (örn: 260px) */
-  }
-  
-  .main-content-wrapper.sidebar-closed {
-    margin-left: 0;
-  }
+.main-content-wrapper.sidebar-open {
+  margin-left: 280px;
+}
+
+.main-content-wrapper.sidebar-closed {
+  margin-left: 0;
 }
 
 .page-container {
-  padding: 20px;
   flex: 1;
+  padding: var(--spacing-2xl);
+  background: var(--bg-primary);
+  overflow-x: hidden;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 404 Error Page */
+.error-404 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-2xl);
+}
+
+.error-404::before {
+  content: "404";
+  position: absolute;
+  font-size: 10rem;
+  font-weight: 900;
+  color: var(--bg-tertiary);
+  z-index: -1;
+  opacity: 0.3;
+}
+
+/* ==========================================
+   SIDEBAR
+   ========================================== */
+
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-base);
+  box-shadow: var(--shadow-lg);
+}
+
+.sidebar.closed {
+  transform: translateX(-100%);
+}
+
+.sidebar-header {
+  padding: var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.sidebar-logo-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.25rem;
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sidebar-close-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.sidebar-close-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-primary);
+  transform: scaleY(0);
+  transition: transform var(--transition-fast);
+}
+
+.sidebar-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transform: translateX(4px);
+}
+
+.sidebar-nav-item.active {
+  background: var(--gradient-glass);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.sidebar-nav-item.active::before {
+  transform: scaleY(1);
+}
+
+.sidebar-nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+/* ==========================================
+   NAVBAR
+   ========================================== */
+
+.navbar {
+  height: 70px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 var(--spacing-2xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.navbar-toggle {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar-toggle:hover {
+  background: var(--bg-tertiary);
+  transform: scale(1.05);
+}
+
+.navbar-toggle svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--text-primary);
+}
+
+.navbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.navbar-user:hover {
+  background: var(--bg-tertiary);
+  box-shadow: var(--shadow-md);
+}
+
+.navbar-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.navbar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.navbar-user-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.navbar-user-role {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .main-content-wrapper.sidebar-open {
+    margin-left: 0;
+  }
+  
+  .sidebar {
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .sidebar.closed {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar-close-btn {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  .theme-toggle {
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+  
+  .page-container {
+    padding: var(--spacing-lg);
+  }
+  
+  .navbar {
+    padding: 0 var(--spacing-lg);
+    height: 60px;
+  }
+  
+  .navbar-title {
+    font-size: 1rem;
+  }
+  
+  .navbar-user-info {
+    display: none;
+  }
+  
+  .sidebar {
+    width: 100%;
+  }
+  
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.5rem; }
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: var(--spacing-md);
+  }
+  
+  .navbar-left {
+    gap: var(--spacing-md);
+  }
+  
+  .navbar-right {
+    gap: var(--spacing-md);
+  }
 }

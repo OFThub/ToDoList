@@ -7,7 +7,7 @@ const api = axios.create({
   },
 });
 
-// 1. İstek Interceptor'ı (Token'ı her isteğe ekler)
+// İstek Interceptor'ı (Token'ı her isteğe ekler)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -19,7 +19,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 2. Yanıt Interceptor'ı (Veriyi sadeleştirir ve 401 kontrolü yapar)
+// Yanıt Interceptor'ı (Veriyi sadeleştirir ve 401 kontrolü yapar)
 api.interceptors.response.use(
   (response) => {
     // Bileşenlerde 'res.data.data' yazmak yerine direkt 'res' üzerinden 

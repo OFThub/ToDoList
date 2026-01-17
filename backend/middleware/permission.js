@@ -11,7 +11,7 @@ module.exports = (requiredPermission) => async (req, res, next) => {
         const userId = req.user?.id;
         let targetProjectId = projectId;
 
-        // 1. ADIM: Eğer istek bir Todo (Görev) üzerinden geliyorsa, önce o görevin projesini bul
+        // Eğer istek bir Todo (Görev) üzerinden geliyorsa, önce o görevin projesini bul
         if (todoId) {
             const todo = await Todo.findById(todoId);
             if (!todo) {
@@ -25,27 +25,27 @@ module.exports = (requiredPermission) => async (req, res, next) => {
             return res.status(400).json({ success: false, msg: "Proje veya Görev ID'si gerekli." });
         }
 
-        // 2. ADIM: Projeyi getir
+        // Projeyi getir
         const project = await Project.findById(targetProjectId);
         if (!project) {
             return res.status(404).json({ success: false, msg: "İlgili proje bulunamadı." });
         }
         req.project = project;
 
-        // 3. ADIM: Yetki Kontrolü (Hiyerarşik)
+        // Yetki Kontrolü (Hiyerarşik)
         
-        // A. Proje Sahibi ise her şeye izni var
+        // Proje Sahibi ise her şeye izni var
         if (project.owner.toString() === userId) {
             req.userProjectRole = "owner";
             return next();
         }
 
-        // B. Ortak Çalışan Kontrolü
+        // Ortak Çalışan Kontrolü
         const collaborator = project.collaborators.find(
             (c) => c.user && c.user.toString() === userId
         );
 
-        // C. Görünürlük Kontrolü (Public Projeler)
+        // Görünürlük Kontrolü (Public Projeler)
         if (!collaborator) {
             if (project.visibility === 'public' && requiredPermission === 'read') {
                 req.userProjectRole = "viewer";
@@ -54,7 +54,7 @@ module.exports = (requiredPermission) => async (req, res, next) => {
             return res.status(403).json({ success: false, msg: "Bu projeye erişim yetkiniz yok." });
         }
 
-        // 4. ADIM: Rol Bazlı İzinler
+        // Rol Bazlı İzinler
         const userRole = collaborator.role;
         const permissionMap = {
             'read': ['viewer', 'editor', 'admin'],

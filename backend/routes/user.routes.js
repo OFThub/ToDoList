@@ -1,18 +1,23 @@
+/**
+ * User Router (Kullanıcı İşlemleri)
+ * Profil yönetimi, kullanıcı arama ve yetkilendirme detaylarını yönetir.
+ */
+
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
-const auth = require("../middleware/auth");
+const auth = require("../middleware/auth"); // JWT Doğrulama Middleware
 
 /**
  * @route   GET /api/v1/users/search
- * @desc    Kullanıcıları e-posta veya kullanıcı adına göre ara
+ * @desc    E-posta veya kullanıcı adına göre filtreleme yapar.
+ * @usage   CollaboratorsModal içinde yeni üye davet ederken kullanılır.
  */
 router.get("/search", auth, async (req, res, next) => {
     try {
         const query = req.query.q;
         
-        // Eğer sorgu boşsa tüm kullanıcıları getir (Kanban eşleşmesi için gerekebilir)
-        // Ancak güvenlik için kendisi hariç tutulur.
+        // Güvenlik: Arama sonuçlarında isteği atan kullanıcının kendisi gelmez.
         let filter = { _id: { $ne: req.user.id } };
 
         if (query && query.length >= 2) {
@@ -34,7 +39,8 @@ router.get("/search", auth, async (req, res, next) => {
 
 /**
  * @route   GET /api/v1/users/me
- * @desc    Giriş yapmış kullanıcının kendi detaylarını getir
+ * @desc    Giriş yapmış kullanıcının profil ve ayar bilgilerini döner.
+ * @usage   AuthContext içindeki checkUser() fonksiyonu için temel noktadır.
  */
 router.get("/me", auth, async (req, res, next) => {
     try {
@@ -47,11 +53,12 @@ router.get("/me", auth, async (req, res, next) => {
 
 /**
  * @route   GET /api/v1/users/:id
- * @desc    ID ile kullanıcı getir (DÜZELTİLDİ: Username artık geliyor)
+ * @desc    Belirli bir kullanıcının kısıtlı bilgilerini getirir.
+ * @usage   KanbanBoard'da görev sahiplerinin isimlerini çözmek için kullanılır.
  */
 router.get("/:id", auth, async (req, res, next) => {
     try {
-        // HATA DÜZELTME: "-username" ifadesi kullanıcı adını gizliyordu, "username" olarak güncellendi.
+        // username artık select içerisinde, böylece avatarlarda isimler görünecek.
         const user = await User.findById(req.params.id).select("username profile.avatar");
         
         if (!user) {
@@ -65,19 +72,20 @@ router.get("/:id", auth, async (req, res, next) => {
 
 /**
  * @route   PUT /api/v1/users/profile
- * @desc    Profil bilgilerini güncelle
+ * @desc    Profil ve tema ayarlarını günceller.
+ * @usage   Profile sayfasındaki form gönderildiğinde tetiklenir.
  */
 router.put("/profile", auth, async (req, res, next) => {
     try {
         const { firstName, lastName, bio, jobTitle, theme } = req.body;
 
-        // undefined gelme ihtimaline karşı kontrollü atama
+        // Dinamik güncelleme nesnesi
         const updateFields = {};
-        if (firstName) updateFields["profile.firstName"] = firstName;
-        if (lastName) updateFields["profile.lastName"] = lastName;
-        if (bio) updateFields["profile.bio"] = bio;
-        if (jobTitle) updateFields["profile.jobTitle"] = jobTitle;
-        if (theme) updateFields["settings.theme"] = theme;
+        if (firstName !== undefined) updateFields["profile.firstName"] = firstName;
+        if (lastName !== undefined) updateFields["profile.lastName"] = lastName;
+        if (bio !== undefined) updateFields["profile.bio"] = bio;
+        if (jobTitle !== undefined) updateFields["profile.jobTitle"] = jobTitle;
+        if (theme !== undefined) updateFields["settings.theme"] = theme;
 
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id,

@@ -1,167 +1,200 @@
+/**
+ * KanbanBoard Bileşeni
+ * Görevlerin durumlarına göre sütunlara ayrıldığı, 
+ * sürükle-bırak desteği sunan ana çalışma alanıdır.
+ */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import "../css/Kanban.css";
 import api from "../../services/api/axios";
 
-const COLUMNS = [
-  { id: "todo", title: "Yapılacaklar" },
-  { id: "in-progress", title: "Devam Ediyor" },
-  { id: "done", title: "Tamamlandı" }
+// CSS dosyası (Öncelik renkleri ve sürükleme animasyonlarını içerir)
+import "../css/Kanban.css";
+
+// Varsayılan Sütun Yapısı
+const INITIAL_COLUMNS = [
+    { id: "todo", title: "Yapılacaklar" },
+    { id: "in-progress", title: "Devam Ediyor" },
+    { id: "done", title: "Tamamlandı" }
 ];
 
 export default function KanbanBoard({ 
-  tasks = [], 
-  updateTaskStatus, 
-  onEdit, 
-  onDelete 
+    tasks = [], 
+    updateTaskStatus, 
+    onEdit, 
+    onDelete,
+    onJoin,
+    currentUserId 
 }) {
-  const [users, setUsers] = useState({});
+    // --- State Yönetimi ---
+    const [columns, setColumns] = useState(INITIAL_COLUMNS);
+    const [users, setUsers] = useState({}); // Kullanıcı ID'lerini isimlere eşler (Cache)
+    const [newColumnTitle, setNewColumnTitle] = useState("");
 
-  const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
 
-  // Kullanıcıyı tek sefer çek
-  const fetchUser = useCallback(async (userId) => {
-    if (!userId || users[userId]) return;
+    // --- Sütun Yönetimi ---
 
-    try {
-      const res = await api.get(`/users/${userId}`);
-      setUsers(prev => ({
-        ...prev,
-        [userId]: res.data.username
-      }));
-    } catch (err) {
-      console.error("Kullanıcı yüklenemedi:", err);
-    }
-  }, [users]);
+    /** Yeni bir statü/sütun ekler */
+    const addColumn = () => {
+        if (!newColumnTitle.trim()) return;
+        const newCol = {
+            id: newColumnTitle.toLowerCase().replace(/\s+/g, '-'), // "Acil İşler" -> "acil-isler"
+            title: newColumnTitle
+        };
+        setColumns([...columns, newCol]);
+        setNewColumnTitle("");
+    };
 
-  // Task'lardaki kullanıcıları SADECE BİR KEZ yükle
-  useEffect(() => {
-    const uniqueUserIds = [...new Set(safeTasks.map(t => t.createdBy))];
-    uniqueUserIds.forEach(fetchUser);
-  }, [safeTasks, fetchUser]);
+    /** Belirli bir sütunu listeden kaldırır */
+    const removeColumn = (id) => {
+        if (window.confirm("Bu sütunu silmek istediğinize emin misiniz?")) {
+            setColumns(columns.filter(col => col.id !== id));
+        }
+    };
 
-  const onDragEnd = (result) => {
-    const { destination, source, draggableId } = result;
+    // --- Kullanıcı Bilgisi Çekme (Avatar İsimleri İçerik) ---
 
-    if (!destination) return;
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) return;
+    const fetchUserData = useCallback(async (userId) => {
+        if (!userId || users[userId]) return; // Zaten yüklüyse tekrar çekme
+        try {
+            const res = await api.get(`/users/${userId}`);
+            setUsers(prev => ({ ...prev, [userId]: res.data.username }));
+        } catch (err) { 
+            console.error(`Kullanıcı (${userId}) bilgisi alınamadı.`); 
+        }
+    }, [users]);
 
-    updateTaskStatus?.(draggableId, destination.droppableId);
-  };
+    // Görev listesi değiştikçe eksik kullanıcı bilgilerini tamamla
+    useEffect(() => {
+        const idsToFetch = new Set();
+        safeTasks.forEach(task => {
+            if (task.createdBy) idsToFetch.add(task.createdBy);
+            task.assignees?.forEach(idOrObj => {
+                const id = typeof idOrObj === 'object' ? idOrObj._id : idOrObj;
+                if (id) idsToFetch.add(id);
+            });
+        });
+        idsToFetch.forEach(id => fetchUserData(id));
+    }, [safeTasks, fetchUserData]);
 
-  return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="kanban-wrapper">
-        {COLUMNS.map((col) => (
-          <Droppable droppableId={col.id} key={col.id}>
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={`kanban-column ${
-                  snapshot.isDraggingOver ? "dragging-over" : ""
-                }`}
-              >
-                <h3 className="column-header">
-                  {col.title}
-                  <span className="task-count">
-                    ({safeTasks.filter(t => t.status === col.id).length})
-                  </span>
-                </h3>
+    // --- Drag & Drop Mantığı ---
 
-                <div className="task-container">
-                  {safeTasks
-                    .filter(task => task.status === col.id)
-                    .map((task, index) => {
-                      const creatorName =
-                        users[task.createdBy] || "Bilinmiyor";
+    const onDragEnd = (result) => {
+        const { destination, source, draggableId } = result;
+        
+        // Geçersiz bir yere bırakıldıysa veya yeri değişmediyse çık
+        if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
+        
+        // Üst bileşene durum güncelleme isteği gönder (API call tetikler)
+        updateTaskStatus?.(draggableId, destination.droppableId);
+    };
 
-                      return (
-                        <Draggable
-                          key={task._id}
-                          draggableId={task._id}
-                          index={index}
-                        >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`task-card ${
-                                snapshot.isDragging ? "is-dragging" : ""
-                              } priority-${task.priority?.toLowerCase()}`}
-                              style={provided.draggableProps.style}
-                            >
-                              <div className="task-header">
-                                <span
-                                  className="user-badge"
-                                  title="Görevi Oluşturan"
+    return (
+        <div className="kanban-outer-container">
+            
+            {/* Sütun Ekleme Paneli */}
+            <div className="column-controls">
+                <input 
+                    type="text" 
+                    placeholder="Örn: Test Aşaması" 
+                    value={newColumnTitle}
+                    onChange={(e) => setNewColumnTitle(e.target.value)}
+                />
+                <button onClick={addColumn} className="btn-add-column">
+                    + Sütun Ekle
+                </button>
+            </div>
+
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div className="kanban-wrapper">
+                    {columns.map((col) => (
+                        <Droppable droppableId={col.id} key={col.id}>
+                            {(provided, snapshot) => (
+                                <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={`kanban-column ${snapshot.isDraggingOver ? "dragging-over" : ""}`}
                                 >
-                                  👤 {creatorName}
-                                </span>
+                                    {/* Sütun Başlığı ve Görev Sayısı */}
+                                    <h3 className="column-header">
+                                        <div className="header-text">
+                                            {col.title}
+                                            <span className="task-count">
+                                                {safeTasks.filter(t => t.status === col.id).length}
+                                            </span>
+                                        </div>
+                                        <button className="btn-remove-col" onClick={() => removeColumn(col.id)}>&times;</button>
+                                    </h3>
 
-                                <div className="task-actions">
-                                  <button
-                                    className="btn-icon"
-                                    onClick={() => onEdit?.(task)}
-                                    title="Düzenle"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    className="btn-icon"
-                                    onClick={() => onDelete?.(task._id)}
-                                    title="Sil"
-                                  >
-                                    🗑️
-                                  </button>
+                                    {/* Görev Kartları Alanı */}
+                                    <div className="task-container">
+                                        {safeTasks
+                                            .filter(t => t.status === col.id)
+                                            .map((task, index) => {
+                                                const isAssigned = task.assignees?.some(id => 
+                                                    (typeof id === 'object' ? id._id : id) === currentUserId
+                                                );
+                                                
+                                                return (
+                                                    <Draggable key={task._id} draggableId={task._id} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}
+                                                                className={`task-card ${snapshot.isDragging ? "is-dragging" : ""} priority-${task.priority?.toLowerCase()}`}
+                                                                style={provided.draggableProps.style}
+                                                            >
+                                                                {/* Kart Üst Bilgisi: Avatarlar ve Yönetim */}
+                                                                <div className="task-header">
+                                                                    <div className="task-assignees-avatars">
+                                                                        {task.assignees?.map((assigneeId) => {
+                                                                            const id = typeof assigneeId === 'object' ? assigneeId._id : assigneeId;
+                                                                            const name = users[id] || "...";
+                                                                            return (
+                                                                                <div key={id} className={`mini-avatar ${id === currentUserId ? 'me' : ''}`} title={name}>
+                                                                                    {name.charAt(0).toUpperCase()}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                        <button 
+                                                                            className={`btn-join-task ${isAssigned ? 'leave' : 'join'}`} 
+                                                                            onClick={() => onJoin?.(task)}
+                                                                        > {isAssigned ? "-" : "+"} </button>
+                                                                    </div>
+                                                                    <div className="task-actions">
+                                                                        <button onClick={() => onEdit?.(task)}>✏️</button>
+                                                                        <button onClick={() => onDelete?.(task._id)}>🗑️</button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Kart İçeriği */}
+                                                                <h4 className="task-title">{task.task}</h4>
+                                                                {task.description && <p className="task-desc">{task.description}</p>}
+
+                                                                {/* Kart Alt Bilgisi */}
+                                                                <div className="task-footer">
+                                                                    <span className="task-date">
+                                                                        📅 {task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '---'}
+                                                                    </span>
+                                                                    <span className={`priority-badge ${task.priority?.toLowerCase()}`}>
+                                                                        {task.priority}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                );
+                                            })}
+                                        {provided.placeholder}
+                                    </div>
                                 </div>
-                              </div>
-
-                              <h4 className="task-title">
-                                {task.task || "Başlıksız Görev"}
-                              </h4>
-
-                              {task.description && (
-                                <p className="task-desc">
-                                  {task.description.length > 80
-                                    ? `${task.description.substring(0, 80)}...`
-                                    : task.description}
-                                </p>
-                              )}
-
-                              <div className="task-footer">
-                                <div className="task-date">
-                                  {task.dueDate ? (
-                                    <>📅 {new Date(task.dueDate).toLocaleDateString()}</>
-                                  ) : (
-                                    <span className="no-date">Tarih yok</span>
-                                  )}
-                                </div>
-
-                                {task.priority && (
-                                  <span
-                                    className={`priority-badge ${task.priority.toLowerCase()}`}
-                                  >
-                                    {task.priority}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    })}
-                  {provided.placeholder}
+                            )}
+                        </Droppable>
+                    ))}
                 </div>
-              </div>
-            )}
-          </Droppable>
-        ))}
-      </div>
-    </DragDropContext>
-  );
+            </DragDropContext>
+        </div>
+    );
 }

@@ -1,14 +1,22 @@
+/**
+ * Profil Sayfası Bileşeni (Profile.js)
+ * Kullanıcının kişisel bilgilerini görüntülemesini ve güncellemesini sağlar.
+ * AuthContext ile entegre çalışarak güncellenen veriyi tüm uygulamada senkronize eder.
+ */
+
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api/axios";
 import { toast } from "react-hot-toast";
+
+// Stil Dosyası
 import "../css/Profile.css";
 
 export default function Profile() {
   const { user, setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   
-  // Form state'ini mevcut kullanıcı bilgileriyle dolduruyoruz
+  // Form State: Mevcut kullanıcı verileriyle (varsa) başlangıç değerlerini alır
   const [formData, setFormData] = useState({
     firstName: user?.profile?.firstName || "",
     lastName: user?.profile?.lastName || "",
@@ -16,20 +24,23 @@ export default function Profile() {
     bio: user?.profile?.bio || "",
   });
 
+  // --- Input Değişim Yöneticisi ---
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- Form Gönderim (API) Yönetimi ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Backend'deki /api/v1/users/profile rotasına istek atar
+      // Profil verilerini backend'e iletir
       const res = await api.put("/users/profile", formData);
       
       if (res.success) {
-        setUser(res.data); // Global auth context'i güncelle
+        // Global Auth state'ini yeni gelen kullanıcı verisiyle günceller
+        setUser(res.data); 
         toast.success("Profil başarıyla güncellendi ✨");
       }
     } catch (err) {
@@ -41,13 +52,16 @@ export default function Profile() {
 
   return (
     <div className="profile-page fade-in">
-      <div className="profile-header">
+      
+      {/* Sayfa Üst Bilgisi */}
+      <header className="profile-header">
         <h1>Hesap Ayarları</h1>
         <p>Profil bilgilerinizi ve hesap tercihlerinizi buradan yönetin.</p>
-      </div>
+      </header>
 
       <div className="profile-container">
-        {/* Sol Menü - Bilgi Kartı */}
+        
+        {/* Sol Sütun: Kullanıcı Bilgi Özeti (Sidebar) */}
         <aside className="profile-card">
           <div className="profile-avatar-large">
             {user?.username?.[0].toUpperCase()}
@@ -59,9 +73,11 @@ export default function Profile() {
           </div>
         </aside>
 
-        {/* Sağ Taraf - Düzenleme Formu */}
+        {/* Sağ Sütun: Bilgi Düzenleme Alanı */}
         <main className="profile-form-area card">
           <form onSubmit={handleSubmit}>
+            
+            {/* Ad & Soyad Satırı */}
             <div className="form-row">
               <div className="form-group">
                 <label>Ad</label>
@@ -83,6 +99,7 @@ export default function Profile() {
               </div>
             </div>
 
+            {/* İş Ünvanı Girişi */}
             <div className="form-group">
               <label>Ünvan</label>
               <input
@@ -93,6 +110,7 @@ export default function Profile() {
               />
             </div>
 
+            {/* Biyografi / Hakkımda Alanı */}
             <div className="form-group">
               <label>Hakkımda</label>
               <textarea
@@ -104,11 +122,17 @@ export default function Profile() {
               />
             </div>
 
+            {/* Aksiyon Butonları */}
             <div className="form-actions">
-              <button type="submit" className="btn-save" disabled={loading}>
+              <button 
+                type="submit" 
+                className="btn-save" 
+                disabled={loading}
+              >
                 {loading ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
               </button>
             </div>
+
           </form>
         </main>
       </div>

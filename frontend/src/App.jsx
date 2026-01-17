@@ -1,8 +1,14 @@
+/**
+ * Ana Uygulama Bileşeni (App.js)
+ * Uygulamanın sayfa düzenini (Layout), yönlendirme (Routing) mantığını 
+ * ve Sidebar/Navbar gibi global bileşenlerin yönetimini sağlar.
+ */
+
 import React, { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 
-// Sayfalar
+// --- Sayfa Bileşenleri ---
 import Login from "./pages/jsx/Login";
 import Register from "./pages/jsx/Register";
 import Dashboard from "./pages/jsx/Dashboard";
@@ -10,40 +16,45 @@ import ProjectDetail from "./pages/jsx/ProjectDetail";
 import Profile from "./pages/jsx/Profile";
 import HomePage from "./pages/jsx/HomePage";
 
-// Bileşenler
+// --- Ortak Bileşenler (Components) ---
 import ProtectedRoute from "./components/jsx/ProtectedRoute";
 import Navbar from "./components/jsx/Navbar";
 import Sidebar from "./components/jsx/Sidebar";
+import ThemeToggle from './components/jsx/ThemeToggle';
 
-// CSS (Layout için gerekli geçişleri buraya veya App.css'e ekleyin)
+// --- Stil Dosyaları ---
 import "./App.css";
 
 export default function App() {
   const { user } = useAuth();
-  // Sidebar durumunu burada yönetiyoruz
+
+  // Layout State Yönetimi: Sidebar'ın açık/kapalı durumunu kontrol eder
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Aç/Kapat fonksiyonu
-  const toggleSidebar = () => setSidebarOpen(prev => !prev);
-  // Mobilde kapatma fonksiyonu
+  // --- Yardımcı Fonksiyonlar ---
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <div className="app-container">
-      {/* Kullanıcı giriş yapmışsa Sidebar'ı göster ve state'i gönder */}
+      <ThemeToggle />
+      
+      {/* Sidebar: Sadece kullanıcı giriş yapmışsa görüntülenir */}
       {user && (
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       )}
       
-      {/* sidebarOpen durumuna göre içeriği kaydırmak için dinamik class ekledik */}
+      {/* Ana İçerik Alanı: Sidebar durumuna göre genişliği dinamik olarak ayarlanır */}
       <div className={`main-content-wrapper ${user && sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
         
-        {/* Navbar'a fonksiyonu prop olarak geçiyoruz */}
+        {/* Üst Menü (Navbar) */}
         {user && <Navbar onToggleSidebar={toggleSidebar} />}
         
+        {/* Sayfa İçeriği (Main Container) */}
         <main className="page-container">
           <Routes>
-            {/* Kamu Rotaları */}
+            
+            {/* --- Kamu (Public) Rotaları --- */}
             <Route 
               path="/login" 
               element={!user ? <Login /> : <Navigate to="/home" replace />} 
@@ -53,7 +64,8 @@ export default function App() {
               element={!user ? <Register /> : <Navigate to="/home" replace />} 
             />
 
-            {/* Korumalı Rotalar */}
+            {/* --- Korumalı (Private) Rotalar --- */}
+            {/* Bu rotalar 'ProtectedRoute' sarmalayıcısı ile yetki kontrolü yapar */}
             <Route 
               path="/home" 
               element={
@@ -81,8 +93,13 @@ export default function App() {
               </ProtectedRoute>
             } />
 
+            {/* --- Yönlendirme ve Hata Yönetimi --- */}
+            {/* Kök dizin kontrolü */}
             <Route path="/" element={<Navigate to={user ? "/home" : "/login"} replace />} />
+            
+            {/* 404 - Sayfa Bulunamadı */}
             <Route path="*" element={<div className="error-404">Sayfa Bulunamadı</div>} />
+            
           </Routes>
         </main>
       </div>
