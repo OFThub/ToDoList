@@ -87,6 +87,7 @@ router.get('/:projectId', auth, permission('read'), async (req, res, next) => {
     let project = await Project.findById(req.params.projectId)
       .populate('owner', 'username')
       .populate('tasks')
+      .populate('')
       .populate('collaborators.user', 'username profile.avatar');
 
     if (!project) {
@@ -193,9 +194,23 @@ router.delete('/:projectId/collaborators/:userId', auth, permission('admin'), as
  * @desc    Projeye bağlı yeni bir görev (todo) oluşturur
  * @access  Private + Permission (Write)
  */
+// projects.js içinde POST /api/v1/projects/:projectId/tasks kısmını şu şekilde güncelleyin:
+
 router.post('/:projectId/tasks', auth, permission('write'), async (req, res, next) => {
   try {
-    const { task, description, priority, dueDate, assignees } = req.body;
+    // Frontend'den gelen tüm alanları yıkım (destructuring) ile alın
+    const { 
+      task, 
+      description, 
+      priority, 
+      dueDate, 
+      startDate, 
+      assignees, 
+      tags, 
+      parentTask, // Eksik olan buydu
+      status,     // Eksik olan buydu
+      progress    // Eksik olan buydu
+    } = req.body;
 
     if (!task) {
       return res.status(400).json({ success: false, msg: 'Görev içeriği zorunludur' });
@@ -207,11 +222,40 @@ router.post('/:projectId/tasks', auth, permission('write'), async (req, res, nex
       description,
       priority,
       dueDate,
+      startDate,
       assignees,
+      tags,
+      parentTask: parentTask || null, // Eğer boşsa null kaydet
+      status: status || 'todo',
+      progress: progress || 0,
       createdBy: req.user.id
     });
 
     res.status(201).json({ success: true, data: newTask });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @route   PUT /api/v1/projects/:projectId/tasks/:taskId
+ * @desc    Mevcut bir görevi günceller
+ */
+router.put('/:projectId/tasks/:taskId', auth, permission('write'), async (req, res, next) => {
+  try {
+    let task = await Todo.findById(req.params.taskId);
+
+    if (!task) {
+      return res.status(404).json({ success: false, msg: 'Görev bulunamadı' });
+    }
+
+    // Verileri güncelle
+    task = await Todo.findByIdAndUpdate(req.params.taskId, req.body, {
+      new: true,
+      runValidators: true
+    });
+
+    res.json({ success: true, data: task });
   } catch (err) {
     next(err);
   }

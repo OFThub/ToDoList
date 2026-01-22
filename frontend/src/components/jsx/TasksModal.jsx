@@ -1,137 +1,127 @@
-/**
- * TaskModal Bileşeni
- * Yeni görev ekleme veya mevcut görevleri düzenleme işlemlerini yönetir.
- * Kontrollü form (controlled component) yapısını kullanır.
- */
-
-import React, { useState } from "react";
+import React from "react";
+import { useTasksModel } from "../../hooks/useTasksModal";
 import "../css/TasksModal.css";
 
-export default function TaskModal({ isOpen, onClose, onSubmit, project }) {
-  // --- Form State Başlangıç Değerleri ---
-  const initialFormState = {
-    task: "",
-    description: "",
-    priority: "Medium",
-    status: "todo",
-    dueDate: ""
-  };
+export default function TaskModal({ 
+    isOpen, 
+    onClose, 
+    onSubmit, 
+    initialData = null,
+    availableTasks = []
+}) {
+    const {
+        formData,
+        tagInput,
+        setTagInput,
+        parentTaskOptions,
+        handleChange,
+        handleAddTag,
+        handleRemoveTag,
+        handleSubmit
+    } = useTasksModel(initialData, isOpen, onSubmit, availableTasks);
 
-  const [formData, setFormData] = useState(initialFormState);
+    if (!isOpen) return null;
 
-  // Modal kapalıysa DOM'a hiçbir şey basma (Performans optimizasyonu)
-  if (!isOpen) return null;
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>{initialData ? "Görevi Düzenle" : "Yeni Görev Oluştur"}</h2>
+                    <button className="modal-close" onClick={onClose}>&times;</button>
+                </div>
 
-  /**
-   * Input Değişim Yönetimi
-   * Tüm input, textarea ve select elementlerini tek bir fonksiyonla günceller.
-   */
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+                <form onSubmit={handleSubmit} className="task-form">
+                    <div className="form-group">
+                        <label>Görev Başlığı *</label>
+                        <input
+                            type="text"
+                            name="task"
+                            value={formData.task}
+                            onChange={handleChange}
+                            placeholder="Görevin başlığını girin"
+                            required
+                        />
+                    </div>
 
-  /**
-   * Form Gönderim Yönetimi
-   * Veriyi üst bileşene (onSubmit) iletir, formu temizler ve modalı kapatır.
-   */
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-    
-    // İşlem sonrası formu ilk haline döndür ve kapat
-    setFormData(initialFormState);
-    onClose();
-  };
+                    <div className="form-group">
+                        <label>Açıklama</label>
+                        <textarea
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            placeholder="Görev detaylarını yazın..."
+                            rows="3"
+                        />
+                    </div>
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      {/* e.stopPropagation: İçeriğe tıklandığında modalın kapanmasını önler */}
-      <div className="modal-content fade-in" onClick={(e) => e.stopPropagation()}>
-        
-        {/* Modal Başlık Alanı */}
-        <div className="modal-header">
-          <h2>Yeni Görev Ekle</h2>
-          <button className="close-btn" onClick={onClose} aria-label="Kapat">
-            &times;
-          </button>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Öncelik</label>
+                            <select name="priority" value={formData.priority} onChange={handleChange}>
+                                <option value="Low">Düşük</option>
+                                <option value="Medium">Orta</option>
+                                <option value="High">Yüksek</option>
+                                <option value="Urgent">Acil</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Başlangıç Tarihi</label>
+                            <input
+                                type="date"
+                                name="startDate"
+                                value={formData.startDate}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Bitiş Tarihi</label>
+                            <input
+                                type="date"
+                                name="dueDate"
+                                value={formData.dueDate}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Etiketler</label>
+                        <div className="tag-input-container">
+                            <input
+                                type="text"
+                                value={tagInput}
+                                onChange={(e) => setTagInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                                placeholder="Etiket ekle (Enter ile)"
+                            />
+                            <button type="button" onClick={handleAddTag} className="btn-add-tag">
+                                + Ekle
+                            </button>
+                        </div>
+                        <div className="tags-display">
+                            {formData.tags.map((tag, idx) => (
+                                <span key={idx} className="tag-item">
+                                    #{tag}
+                                    <button type="button" onClick={() => handleRemoveTag(tag)} className="tag-remove">
+                                        &times;
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="modal-footer">
+                        <button type="button" onClick={onClose} className="btn-cancel">İptal</button>
+                        <button type="submit" className="btn-submit">
+                            {initialData ? "Güncelle" : "Oluştur"}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-
-        {/* Görev Formu */}
-        <form onSubmit={handleSubmit}>
-          
-          {/* Görev Başlığı */}
-          <div className="form-group">
-            <label htmlFor="task">Görev Başlığı</label>
-            <input
-              id="task"
-              type="text"
-              name="task"
-              value={formData.task}
-              onChange={handleChange}
-              placeholder="Yapılacak işi yazın..."
-              required
-            />
-          </div>
-
-          {/* Açıklama */}
-          <div className="form-group">
-            <label htmlFor="description">Açıklama</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Görev detayları..."
-              rows="3"
-            />
-          </div>
-
-          {/* Yan Yana Alanlar: Öncelik ve Tarih */}
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="priority">Öncelik</label>
-              <select 
-                id="priority" 
-                name="priority" 
-                value={formData.priority} 
-                onChange={handleChange}
-              >
-                <option value="Low">Düşük</option>
-                <option value="Medium">Orta</option>
-                <option value="High">Yüksek</option>
-                <option value="Urgent">Acil</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="dueDate">Bitiş Tarihi</label>
-              <input
-                id="dueDate"
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          {/* Form Aksiyonları */}
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="btn-secondary" 
-              onClick={onClose}
-            >
-              İptal
-            </button>
-            <button type="submit" className="btn-primary">
-              Görevi Oluştur
-            </button>
-          </div>
-
-        </form>
-      </div>
-    </div>
-  );
+    );
 }
