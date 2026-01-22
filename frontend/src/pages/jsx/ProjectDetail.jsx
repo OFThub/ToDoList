@@ -18,23 +18,45 @@ import "../css/projectDetail.css";
 export default function ProjectDetail() {
     // Custom Hook'tan gelen state ve fonksiyonların yapılandırılması
     const { 
-        project, tasks, loading, view, setView,
+        project, tasks, loading, error, view, setView,
         isTaskModalOpen, setIsTaskModalOpen, 
         editingTask, openEditModal, closeTaskModal,
         handleCreateTask, handleUpdateTask, updateTaskStatus,
         handleDeleteTask, 
         isCollabModalOpen, setIsCollabModalOpen,
         addCollaborator, removeCollaborator,
-        currentUserId, handleToggleJoinTask 
+        currentUserId, handleToggleJoinTask,
+        handleProjectUpdate
+
     } = useProjectDetail();
 
     // --- Durum Kontrolleri (Loading & Error) ---
     if (loading) {
-        return <div className="loader-container"><div className="loader"></div></div>;
+        return (
+            <div className="loader-container">
+                <div className="loader"></div>
+                <p>Proje yükleniyor...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="error-state">
+                <h2>⚠️ Hata</h2>
+                <p>{error}</p>
+                <button onClick={() => window.location.reload()}>Yeniden Yükle</button>
+            </div>
+        );
     }
 
     if (!project) {
-        return <div className="error-state">Proje bulunamadı.</div>;
+        return (
+            <div className="error-state">
+                <h2>⚠️ Proje Bulunamadı</h2>
+                <p>Aradığınız proje mevcut değil.</p>
+            </div>
+        );
     }
 
     return (
@@ -73,7 +95,7 @@ export default function ProjectDetail() {
                         {project.collaborators?.length > 3 && (
                             <div className="mini-avatar more">+{project.collaborators.length - 3}</div>
                         )}
-                        <button className="btn-add-member">+ Katılımcı</button>
+                        <button className="btn-add-member" onClick={() => setIsCollabModalOpen(true)}>+ Katılımcı</button>
                     </div>
                 </div>
 
@@ -98,12 +120,14 @@ export default function ProjectDetail() {
                 {view === "kanban" ? (
                     // Görünüm 1: Sürükle-Bırak Destekli Kanban Tahtası
                     <KanbanBoard 
-                        tasks={tasks} 
+                        tasks={tasks}
+                        project={project}
                         updateTaskStatus={updateTaskStatus} 
                         onEdit={openEditModal}
                         onDelete={handleDeleteTask} 
                         onJoin={handleToggleJoinTask} 
                         currentUserId={currentUserId}
+                        onProjectUpdate={handleProjectUpdate}
                     />
                 ) : (
                     // Görünüm 2: Geleneksel Tablo Listesi
@@ -115,15 +139,32 @@ export default function ProjectDetail() {
                                     <th>Durum</th>
                                     <th>Öncelik</th>
                                     <th>Bitiş Tarihi</th>
+                                    <th>İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {tasks.map(task => (
                                     <tr key={task._id}>
-                                        <td>{task.task}</td>
-                                        <td><span className={`pill ${task.status}`}>{task.status}</span></td>
-                                        <td><span className={`priority ${task.priority}`}>{task.priority}</span></td>
-                                        <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
+                                        <td className="task-name">{task.task}</td>
+                                        <td>
+                                            <select 
+                                                value={task.status} 
+                                                onChange={(e) => updateTaskStatus(task._id, e.target.value)}
+                                                className="status-select"
+                                            >
+                                                {project.customStatuses?.map(status => (
+                                                    <option key={status.label} value={status.label}>
+                                                        {status.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td><span className={`priority ${task.priority?.toLowerCase()}`}>{task.priority}</span></td>
+                                        <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : "-"}</td>
+                                        <td className="actions">
+                                            <button onClick={() => openEditModal(task)} title="Düzenle">✏️</button>
+                                            <button onClick={() => handleDeleteTask(task._id)} title="Sil">🗑️</button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -140,6 +181,7 @@ export default function ProjectDetail() {
                 onClose={closeTaskModal}
                 onSubmit={editingTask ? (data) => handleUpdateTask(editingTask._id, data) : handleCreateTask}
                 initialData={editingTask}
+                customStatuses={project.customStatuses}
             />
 
             {/* Katılımcı Yönetimi Modalı */}

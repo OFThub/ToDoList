@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api/axios";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,9 +13,11 @@ import { useAuth } from "../contexts/AuthContext";
 export const useProjectDetail = () => {
     // --- URL Parametreleri ve State Tanımlamaları ---
     const { projectId } = useParams();
+    const navigate = useNavigate();
     const [project, setProject] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [view, setView] = useState("kanban"); // 'kanban' veya 'list' görünümü
     
     // Modal ve Düzenleme Durumları
@@ -28,22 +30,62 @@ export const useProjectDetail = () => {
     const currentUserId = user?._id || user?.id;
 
     /**
+     * Projeyi güncelleyen fonksiyon
+     * KanbanBoard bileşeninde customStatuses güncellendiğinde çağrılır
+     */
+    const handleProjectUpdate = useCallback((updatedProject) => {
+        if (updatedProject && typeof updatedProject === 'object') {
+            setProject(prev => ({
+                ...prev,
+                ...updatedProject
+            }));
+        }
+    }, []);
+
+    /**
      * Veri Çekme Fonksiyonu
      * useCallback ile sarmalanarak gereksiz yeniden oluşturulmalar engellenmiştir.
      */
     const fetchProjectDetails = useCallback(async () => {
-        if (!projectId) return;
+        if (!projectId) {
+            setError("Proje ID'si bulunamadı");
+            setLoading(false);
+            return;
+        }
+        
         try {
             setLoading(true);
+            setError(null);
             const res = await api.get(`/projects/${projectId}`);
-            setProject(res.data);
-            setTasks(res.data.tasks || []);
+            
+            if (res.data && typeof res.data === 'object') {
+                setProject(res.data);
+                setTasks(Array.isArray(res.data.tasks) ? res.data.tasks : []);
+            } else {
+                setError("Proje verisi geçersiz");
+                setProject(null);
+                setTasks([]);
+            }
         } catch (err) {
-            if (err.response?.status !== 401) toast.error("Proje yüklenemedi.");
+            console.error("Proje yükleme hatası:", err);
+            
+            if (err.response?.status === 404) {
+                setError("Proje bulunamadı");
+                toast.error("Proje bulunamadı.");
+            } else if (err.response?.status === 401) {
+                toast.error("Oturum açmanız gerekiyor");
+                navigate("/login");
+            } else {
+                setError("Proje yüklenemedi");
+                toast.error("Proje yüklenemedi.");
+            }
+            
+            setProject(null);
+            setTasks([]);
         } finally {
             setLoading(false);
         }
-    }, [projectId]);
+    }, [projectId, navigate]);
 
     // Bileşen yüklendiğinde veriyi çek
     useEffect(() => { 
@@ -51,56 +93,119 @@ export const useProjectDetail = () => {
     }, [fetchProjectDetails]);
 
     // --- Modal Yönetim Fonksiyonları ---
-    const openEditModal = (task) => {
-        setEditingTask(task);
-        setIsTaskModalOpen(true);
-    };
+    const openEditModal = useCallback((task) => {
+        if (task && task._id) {
+            setEditingTask(task);
+            setIsTaskModalOpen(true);
+        }
+    }, []);
 
-    const closeTaskModal = () => {
+    const closeTaskModal = useCallback(() => {
         setEditingTask(null);
         setIsTaskModalOpen(false);
-    };
+    }, []);
 
     // --- Görev (Task) CRUD Operasyonları ---
 
-    const handleCreateTask = async (taskData) => {
-        try {
-            const res = await api.post(`/projects/${projectId}/tasks`, taskData);
-            setTasks((prev) => [...prev, (res.data?.data || res.data)]);
-            closeTaskModal();
-            toast.success("Görev eklendi!");
-        } catch (err) { toast.error("Görev oluşturulamadı."); }
-    };
+    const handleCreateTask = useCallback(async (taskData) => {
+        if (!projectId) {
+            toast.error("Proje bilgisi geçersiz");
+            return;
+        }
 
-    const handleUpdateTask = async (taskId, updatedData) => {
+        try {
+            const payload = {
+                ...taskData,
+                projectId: projectId
+            };
+
+            const res = await api.post(`/projects/${projectId}/tasks`, payload);
+            const newTask = res.data?.data || res.data;
+            
+            if (newTask && newTask._id) {
+                setTasks((prev) => [...prev, newTask]);
+                closeTaskModal();
+                toast.success("Görev eklendi!");
+            } else {
+                throw new Error("Görev verisi geçersiz");
+            }
+        } catch (err) { 
+            console.error("Görev oluşturma hatası:", err);
+            toast.error(err.response?.data?.msg || "Görev oluşturulamadı."); 
+        }
+    }, [projectId, closeTaskModal]);
+
+    const handleUpdateTask = useCallback(async (taskId, updatedData) => {
+        if (!taskId) {
+            toast.error("Görev bilgisi geçersiz");
+            return;
+        }
+
         try {
             const res = await api.patch(`/todos/${taskId}`, updatedData);
             const updatedTask = res.data?.data || res.data;
-            setTasks((prev) => prev.map((t) => (t._id === taskId ? updatedTask : t)));
-            toast.success("Görev güncellendi");
-            closeTaskModal();
-        } catch (err) { toast.error("Güncelleme başarısız."); }
-    };
+            
+            if (updatedTask && updatedTask._id) {
+                setTasks((prev) => prev.map((t) => (t._id === taskId ? updatedTask : t)));
+                toast.success("Görev güncellendi");
+                closeTaskModal();
+            } else {
+                throw new Error("Görev verisi geçersiz");
+            }
+        } catch (err) { 
+            console.error("Güncelleme hatası:", err);
+            toast.error(err.response?.data?.msg || "Güncelleme başarısız."); 
+        }
+    }, [closeTaskModal]);
 
-    const updateTaskStatus = async (taskId, newStatus) => {
+    const updateTaskStatus = useCallback(async (taskId, newStatus) => {
+        if (!taskId || !newStatus) {
+            console.warn("Geçersiz taskId veya status");
+            return;
+        }
+
         try {
-            await api.patch(`/todos/${taskId}`, { status: newStatus });
-            setTasks((prev) => prev.map((t) => (t._id === taskId ? { ...t, status: newStatus } : t)));
-        } catch (err) { toast.error("Durum güncellenemedi."); }
-    };
+            const res = await api.patch(`/todos/${taskId}`, { status: newStatus });
+            const updatedTask = res.data?.data || res.data;
+            
+            if (updatedTask && updatedTask._id) {
+                setTasks((prev) => prev.map((t) => (t._id === taskId ? updatedTask : t)));
+            }
+        } catch (err) { 
+            console.error("Durum güncelleme hatası:", err);
+            toast.error(err.response?.data?.msg || "Durum güncellenemedi."); 
+        }
+    }, []);
 
-    const handleDeleteTask = async (taskId) => {
+    const handleDeleteTask = useCallback(async (taskId) => {
+        if (!taskId) {
+            toast.error("Görev bilgisi geçersiz");
+            return;
+        }
+
         if (!window.confirm("Bu görevi silmek istediğinize emin misiniz?")) return;
+        
         try {
             await api.delete(`/todos/${taskId}`);
             setTasks((prev) => prev.filter((t) => t._id !== taskId));
             toast.success("Görev silindi.");
-        } catch (err) { toast.error("Silme başarısız."); }
-    };
+        } catch (err) { 
+            console.error("Silme hatası:", err);
+            toast.error(err.response?.data?.msg || "Silme başarısız."); 
+        }
+    }, []);
 
     // --- Göreve Katılma / Ayrılma (Assignee) Mantığı ---
-    const handleToggleJoinTask = async (task) => {
-        if (!currentUserId) return toast.error("Lütfen giriş yapın.");
+    const handleToggleJoinTask = useCallback(async (task) => {
+        if (!task || !task._id) {
+            toast.error("Görev bilgisi geçersiz");
+            return;
+        }
+
+        if (!currentUserId) {
+            toast.error("Lütfen giriş yapın.");
+            return;
+        }
         
         // Kullanıcının halihazırda atanıp atanmadığını kontrol eder
         const isAlreadyAssigned = task.assignees?.some(id => 
@@ -123,15 +228,23 @@ export const useProjectDetail = () => {
             const res = await api.patch(`/todos/${task._id}`, { assignees: newAssignees });
             const updatedTask = res.data?.data || res.data;
 
-            setTasks(prev => prev.map(t => t._id === task._id ? updatedTask : t));
-            isAlreadyAssigned ? toast.success("Görevden ayrıldınız.") : toast.success("Göreve katıldınız!");
-        } catch (err) { toast.error("İşlem başarısız."); }
-    };
+            if (updatedTask && updatedTask._id) {
+                setTasks(prev => prev.map(t => t._id === task._id ? updatedTask : t));
+                isAlreadyAssigned ? toast.success("Görevden ayrıldınız.") : toast.success("Göreve katıldınız!");
+            }
+        } catch (err) { 
+            console.error("Katılım değiştirme hatası:", err);
+            toast.error(err.response?.data?.msg || "İşlem başarısız."); 
+        }
+    }, [currentUserId]);
 
     // --- Katılımcı (Collaborator) Yönetimi ---
 
-    const removeCollaborator = async (userId) => {
-        if (!projectId || !userId) return;
+    const removeCollaborator = useCallback(async (userId) => {
+        if (!projectId || !userId) {
+            toast.error("Katılımcı bilgisi geçersiz");
+            return;
+        }
 
         if (!window.confirm("Projeden çıkarmak istediğinize emin misiniz? Bu kullanıcı atandığı tüm görevlerden de çıkarılacaktır.")) {
             return;
@@ -146,33 +259,59 @@ export const useProjectDetail = () => {
                 assignees: task.assignees?.filter(id => {
                     const currentId = (typeof id === 'object' ? id._id : id);
                     return currentId !== userId;
-                })
+                }) || []
             })));
 
             await fetchProjectDetails(); // Proje verilerini tazele
             toast.success("Katılımcı ve tüm görev atamaları kaldırıldı.");
         } catch (err) {
-            console.error("Silme hatası:", err.response || err);
+            console.error("Katılımcı silme hatası:", err);
             toast.error(err.response?.data?.msg || "İşlem başarısız oldu.");
         }
-    };
+    }, [projectId, fetchProjectDetails]);
 
-    const addCollaborator = async (email, role) => {
+    const addCollaborator = useCallback(async (email, role) => {
+        if (!projectId || !email) {
+            toast.error("Proje veya e-posta bilgisi geçersiz");
+            return;
+        }
+
         try {
-            await api.post(`/projects/${projectId}/collaborators`, { email, role });
-            fetchProjectDetails();
-            toast.success("Katılımcı eklendi!");
+            const res = await api.post(`/projects/${projectId}/collaborators`, { email, role });
+            if (res.data) {
+                await fetchProjectDetails();
+                toast.success("Katılımcı eklendi!");
+            }
         } catch (err) { 
+            console.error("Katılımcı ekleme hatası:", err);
             toast.error(err.response?.data?.msg || "Ekleme başarısız."); 
         }
-    };
+    }, [projectId, fetchProjectDetails]);
 
     // Dışarıya aktarılan arayüz (Public API of the hook)
     return {
-        project, tasks, loading, view, setView, isTaskModalOpen, setIsTaskModalOpen,
-        editingTask, openEditModal, closeTaskModal, handleCreateTask, handleUpdateTask, 
-        updateTaskStatus, handleDeleteTask, addCollaborator, 
-        removeCollaborator, isCollabModalOpen, setIsCollabModalOpen, currentUserId,
-        fetchProjectDetails, handleToggleJoinTask 
+        project, 
+        tasks, 
+        loading,
+        error,
+        view, 
+        setView, 
+        isTaskModalOpen, 
+        setIsTaskModalOpen,
+        editingTask, 
+        openEditModal, 
+        closeTaskModal, 
+        handleCreateTask, 
+        handleUpdateTask, 
+        updateTaskStatus, 
+        handleDeleteTask, 
+        addCollaborator, 
+        removeCollaborator, 
+        isCollabModalOpen, 
+        setIsCollabModalOpen, 
+        currentUserId,
+        fetchProjectDetails, 
+        handleToggleJoinTask, 
+        handleProjectUpdate,
     };
 };

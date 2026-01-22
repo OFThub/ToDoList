@@ -86,8 +86,10 @@ router.get('/:projectId', auth, permission('read'), async (req, res, next) => {
   try {
     let project = await Project.findById(req.params.projectId)
       .populate('owner', 'username')
-      .populate('tasks')
-      .populate('')
+      .populate({
+        path: 'tasks',
+        select: 'task description status priority dueDate startDate assignees progress parentTask createdBy'
+      })
       .populate('collaborators.user', 'username profile.avatar');
 
     if (!project) {
@@ -97,6 +99,56 @@ router.get('/:projectId', auth, permission('read'), async (req, res, next) => {
     res.json({ success: true, data: project });
   } catch (err) {
     console.error("Proje Detay Hatası:", err);
+    next(err);
+  }
+});
+
+/**
+ * @route   PATCH /api/v1/projects/:projectId
+ * @desc    Proje bilgilerini ve custom statüleri günceller
+ * @access  Private + Permission (Admin)
+ */
+router.patch('/:projectId', auth, permission('admin'), async (req, res, next) => {
+  try {
+    const { customStatuses, title, description, category, color, visibility } = req.body;
+    console.log("Gelen Body:", req.body);
+
+    // Güncellenebilir alanları belirle
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (category !== undefined) updates.category = category;
+    if (color !== undefined) updates.color = color;
+    if (visibility !== undefined) updates.visibility = visibility;
+    
+    // Custom statüleri güncelle (varsa)
+    if (customStatuses && Array.isArray(customStatuses)) {
+      // Statü validasyonu
+      if (customStatuses.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          msg: 'En az bir durum olmalı' 
+        });
+      }
+      updates.customStatuses = customStatuses.map(s => ({
+        label: s.label || s,
+        color: s.color || '#6366f1'
+      }));
+    }
+    console.log("Güncellenen Alanlar:", updates);
+    const project = await Project.findByIdAndUpdate(
+      req.params.projectId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).populate('owner', 'username').populate('collaborators.user', 'username');
+
+    if (!project) {
+      return res.status(404).json({ success: false, msg: 'Proje bulunamadı' });
+    }
+
+    res.json({ success: true, data: project });
+  } catch (err) {
+    console.error("Proje Güncelleme Hatası:", err);
     next(err);
   }
 });
@@ -127,9 +179,10 @@ router.post('/:projectId/collaborators', auth, permission('admin'), async (req, 
       return res.status(404).json({ success: false, msg: "Proje bulunamadı." });
     }
 
-    // Çift kayıt kontrolü (Sahip veya Mevcut Katılımcı)
+    // Çift kayıt kontrolü
     const isAlreadyMember = project.collaborators.some(
-      c => c.user.toString() === userToAdd._id.toString() || project.owner.toString() === userToAdd._id.toString()
+      c => c.user.toString() === userToAdd._id.toString() || 
+           project.owner.toString() === userToAdd._id.toString()
     );
 
     if (isAlreadyMember) {
@@ -142,7 +195,15 @@ router.post('/:projectId/collaborators', auth, permission('admin'), async (req, 
     });
 
     await project.save();
-    res.status(200).json({ success: true, msg: "Katılımcı başarıyla eklendi." });
+    
+    // Güncellenmiş projeyi döndür
+    const updatedProject = await project.populate('collaborators.user', 'username profile.avatar');
+    
+    res.status(200).json({ 
+      success: true, 
+      msg: "Katılımcı başarıyla eklendi.",
+      data: updatedProject 
+    });
   } catch (err) {
     console.error("Katılımcı Ekleme Hatası:", err);
     res.status(500).json({ success: false, msg: "Sunucu hatası." });
@@ -169,15 +230,16 @@ router.delete('/:projectId/collaborators/:userId', auth, permission('admin'), as
     );
     await project.save();
 
-    // Veri Tutarlılığı: Görevlerdeki (assignees) atamaları temizle
+    // Veri Tutarlılığı: Görevlerdeki atamalar temizle
     await Todo.updateMany(
-      { project: projectId, assignees: userId }, 
+      { project: projectId, assignees: userId },
       { $pull: { assignees: userId } }
     );
 
     res.status(200).json({ 
       success: true, 
-      msg: "Katılımcı projeden ve ilgili tüm görevlerden çıkarıldı." 
+      msg: "Katılımcı projeden ve ilgili tüm görevlerden çıkarıldı.",
+      data: project 
     });
   } catch (err) {
     console.error("Katılımcı Silme Hatası:", err);
@@ -186,19 +248,16 @@ router.delete('/:projectId/collaborators/:userId', auth, permission('admin'), as
 });
 
 // ---------------------------------------------------------
-// GÖREV (TASK) İŞLEMLERİ VE PROJE YÖNETİMİ
+// GÖREV (TASK) İŞLEMLERİ
 // ---------------------------------------------------------
 
 /**
  * @route   POST /api/v1/projects/:projectId/tasks
- * @desc    Projeye bağlı yeni bir görev (todo) oluşturur
+ * @desc    Projeye bağlı yeni bir görev oluşturur
  * @access  Private + Permission (Write)
  */
-// projects.js içinde POST /api/v1/projects/:projectId/tasks kısmını şu şekilde güncelleyin:
-
 router.post('/:projectId/tasks', auth, permission('write'), async (req, res, next) => {
   try {
-    // Frontend'den gelen tüm alanları yıkım (destructuring) ile alın
     const { 
       task, 
       description, 
@@ -207,26 +266,37 @@ router.post('/:projectId/tasks', auth, permission('write'), async (req, res, nex
       startDate, 
       assignees, 
       tags, 
-      parentTask, // Eksik olan buydu
-      status,     // Eksik olan buydu
-      progress    // Eksik olan buydu
+      parentTask, 
+      status,
+      progress
     } = req.body;
 
     if (!task) {
       return res.status(400).json({ success: false, msg: 'Görev içeriği zorunludur' });
     }
 
+    // Proje kontrol et
+    const project = await Project.findById(req.params.projectId);
+    if (!project) {
+      return res.status(404).json({ success: false, msg: 'Proje bulunamadı' });
+    }
+
+    // Status validasyonu
+    const validStatus = status && project.customStatuses.some(s => s.label === status)
+      ? status
+      : project.customStatuses[0]?.label || 'Todo';
+
     const newTask = await Todo.create({
       project: req.params.projectId,
       task,
-      description,
-      priority,
+      description: description || '',
+      priority: priority || 'Medium',
       dueDate,
       startDate,
-      assignees,
-      tags,
-      parentTask: parentTask || null, // Eğer boşsa null kaydet
-      status: status || 'todo',
+      assignees: assignees || [],
+      tags: tags || [],
+      parentTask: parentTask || null,
+      status: validStatus,
       progress: progress || 0,
       createdBy: req.user.id
     });
@@ -239,23 +309,58 @@ router.post('/:projectId/tasks', auth, permission('write'), async (req, res, nex
 
 /**
  * @route   PUT /api/v1/projects/:projectId/tasks/:taskId
- * @desc    Mevcut bir görevi günceller
+ * @desc    Görevi günceller
+ * @access  Private + Permission (Write)
  */
 router.put('/:projectId/tasks/:taskId', auth, permission('write'), async (req, res, next) => {
   try {
-    let task = await Todo.findById(req.params.taskId);
+    const task = await Todo.findById(req.params.taskId);
 
     if (!task) {
       return res.status(404).json({ success: false, msg: 'Görev bulunamadı' });
     }
 
-    // Verileri güncelle
-    task = await Todo.findByIdAndUpdate(req.params.taskId, req.body, {
-      new: true,
-      runValidators: true
-    });
+    // Status değişirse validasyon yap
+    if (req.body.status) {
+      const project = await Project.findById(req.params.projectId);
+      const statusExists = project.customStatuses.some(s => s.label === req.body.status);
+      if (!statusExists) {
+        return res.status(400).json({ success: false, msg: 'Geçersiz durum' });
+      }
+    }
 
-    res.json({ success: true, data: task });
+    const updatedTask = await Todo.findByIdAndUpdate(
+      req.params.taskId,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    res.json({ success: true, data: updatedTask });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @route   DELETE /api/v1/projects/:projectId/tasks/:taskId
+ * @desc    Görevi siler (alt görevler de silinir)
+ * @access  Private + Permission (Write)
+ */
+router.delete('/:projectId/tasks/:taskId', auth, permission('write'), async (req, res, next) => {
+  try {
+    const task = await Todo.findById(req.params.taskId);
+
+    if (!task) {
+      return res.status(404).json({ success: false, msg: 'Görev bulunamadı' });
+    }
+
+    // Alt görevleri sil
+    await Todo.deleteMany({ parentTask: req.params.taskId });
+    
+    // Görevi sil
+    await Todo.findByIdAndDelete(req.params.taskId);
+
+    res.json({ success: true, msg: 'Görev silindi' });
   } catch (err) {
     next(err);
   }
@@ -263,13 +368,15 @@ router.put('/:projectId/tasks/:taskId', auth, permission('write'), async (req, r
 
 /**
  * @route   DELETE /api/v1/projects/:projectId
- * @desc    Projeyi ve projeye ait tüm görevleri kalıcı olarak siler
+ * @desc    Projeyi ve projeye ait tüm görevleri siler
  * @access  Private + Permission (Delete)
  */
 router.delete('/:projectId', auth, permission('delete'), async (req, res, next) => {
   try {
-    // Önce ilişkili tüm görevleri temizle (Cascade Delete)
+    // Projeye ait tüm görevleri sil
     await Todo.deleteMany({ project: req.params.projectId });
+    
+    // Projeyi sil
     await Project.findByIdAndDelete(req.params.projectId);
 
     res.json({ success: true, msg: 'Proje ve görevler silindi' });

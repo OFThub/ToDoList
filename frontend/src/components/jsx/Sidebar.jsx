@@ -56,10 +56,10 @@ export default function Sidebar({ isOpen, onClose }) {
           {/* Bölüm Ayracı: Proje Yönetimi */}
           <div className="sidebar-section">
             <p className="section-title">Hızlı İşlemler</p>
-            <button className="btn-add-project" onClick={onClose}>
+            <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
               <span className="plus-icon">+</span>
               <span className="btn-text">Yeni Proje</span>
-            </button>
+            </NavLink>
           </div>
         </nav>
 
