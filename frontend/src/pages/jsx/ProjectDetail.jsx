@@ -14,7 +14,7 @@ import TaskModal from "../../components/jsx/TasksModal";
 import CollaboratorsModal from "../../components/jsx/CollaboratorsModal";
 
 // --- Stil ---
-import "../css/projectDetail.css";
+import "../css/ProjectDetail.css";
 
 export default function ProjectDetail() {
     const { 
