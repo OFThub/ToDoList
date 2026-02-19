@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { useDashboard } from "../../hooks/useDashboard";
 
 // Stil Dosyası
-import "../css/dashboard.css";
+import "../css/Dashboard.css";
 
 export default function Dashboard() {
   // useDashboard Hook'undan gelen yönetim araçları
