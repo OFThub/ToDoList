@@ -1,12 +1,28 @@
 {
+  "name": "todolist-app",
+  "version": "1.0.0",
+  "description": "Full-stack MERN ToDoList application",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "verify": "node verify-setup.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm install && npm run dev",
+    "dev:frontend": "cd frontend && npm install && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm install",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "start": "node backend/server.js",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.9",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.1.0",
     "typescript": "^5.9.3"
   },
-  "scripts": {
-    "check-types": "tsc --noEmit"
+  "dependencies": {
+    "netlify": "^13.3.5"
   }
 }
