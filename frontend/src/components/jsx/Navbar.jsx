@@ -10,7 +10,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "react-hot-toast";
 
 // Stil Dosyası
-import "../css/navbar.css";
+import "../css/Navbar.css";
 
 export default function Navbar({ onToggleSidebar }) {
   const { setUser } = useAuth(); // AuthContext'ten kullanıcı state'ini sıfırlamak için
