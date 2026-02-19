@@ -17,7 +17,7 @@ const server = http.createServer(app);
 connectDB();
 
 // 3. Socket.io Yapılandırması
-// Frontend (5173) ile Backend (5000) arasındaki WebSocket CORS ayarı
+// Frontend (5173) ile Backend (5000) arasındaki WebSocket CORS ayarları yapıldı. Ping timeout 60 saniye olarak belirlendi.
 const io = new Server(server, {
   pingTimeout: 60000,
   cors: {

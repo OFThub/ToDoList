@@ -87,6 +87,18 @@ export default function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/project/:projectId/list" element={
+              <ProtectedRoute>
+                <ProjectDetail />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/project/:projectId/timeline" element={
+              <ProtectedRoute>
+                <ProjectDetail />
+              </ProtectedRoute>
+            } />
+
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />

@@ -5,24 +5,34 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api/axios";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 
 export const useProjectDetail = () => {
-    // --- URL Parametreleri ve State Tanımlamaları ---
+    // --- URL Parametreleri ---
     const { projectId } = useParams();
     const navigate = useNavigate();
-    const [project, setProject] = useState(null);
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [view, setView] = useState("kanban"); // 'kanban' veya 'list' görünümü
-    
+    const location = useLocation();
+
+    // URL'den başlangıç görünümünü belirle
+    const getInitialView = () => {
+        if (location.pathname.endsWith("/list"))     return "list";
+        if (location.pathname.endsWith("/timeline")) return "gantt";
+        return "kanban";
+    };
+
+    // --- State Tanımlamaları ---
+    const [project, setProject]   = useState(null);
+    const [tasks, setTasks]       = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [error, setError]       = useState(null);
+    const [view, setViewState]    = useState(getInitialView);
+
     // Modal ve Düzenleme Durumları
-    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-    const [editingTask, setEditingTask] = useState(null);
+    const [isTaskModalOpen, setIsTaskModalOpen]   = useState(false);
+    const [editingTask, setEditingTask]           = useState(null);
     const [isCollabModalOpen, setIsCollabModalOpen] = useState(false);
 
     // Oturum Bilgileri
@@ -30,21 +40,33 @@ export const useProjectDetail = () => {
     const currentUserId = user?._id || user?.id;
 
     /**
+     * View değiştirirken URL'i de günceller
+     */
+    const setView = useCallback((newView) => {
+        const pathMap = { kanban: "kanban", list: "list", gantt: "timeline" };
+        navigate(`/project/${projectId}/${pathMap[newView]}`);
+        setViewState(newView);
+    }, [projectId, navigate]);
+
+    /**
+     * URL değiştiğinde (örn. tarayıcı geri/ileri) view'i senkronize et
+     */
+    useEffect(() => {
+        setViewState(getInitialView());
+    }, [location.pathname]);
+
+    /**
      * Projeyi güncelleyen fonksiyon
      * KanbanBoard bileşeninde customStatuses güncellendiğinde çağrılır
      */
     const handleProjectUpdate = useCallback((updatedProject) => {
         if (updatedProject && typeof updatedProject === 'object') {
-            setProject(prev => ({
-                ...prev,
-                ...updatedProject
-            }));
+            setProject(prev => ({ ...prev, ...updatedProject }));
         }
     }, []);
 
     /**
      * Veri Çekme Fonksiyonu
-     * useCallback ile sarmalanarak gereksiz yeniden oluşturulmalar engellenmiştir.
      */
     const fetchProjectDetails = useCallback(async () => {
         if (!projectId) {
@@ -87,7 +109,6 @@ export const useProjectDetail = () => {
         }
     }, [projectId, navigate]);
 
-    // Bileşen yüklendiğinde veriyi çek
     useEffect(() => { 
         fetchProjectDetails(); 
     }, [fetchProjectDetails]);
@@ -114,12 +135,7 @@ export const useProjectDetail = () => {
         }
 
         try {
-            const payload = {
-                ...taskData,
-                projectId: projectId
-            };
-
-            const res = await api.post(`/projects/${projectId}/tasks`, payload);
+            const res = await api.post(`/projects/${projectId}/tasks`, { ...taskData, projectId });
             const newTask = res.data?.data || res.data;
             
             if (newTask && newTask._id) {
@@ -159,10 +175,7 @@ export const useProjectDetail = () => {
     }, [closeTaskModal]);
 
     const updateTaskStatus = useCallback(async (taskId, newStatus) => {
-        if (!taskId || !newStatus) {
-            console.warn("Geçersiz taskId veya status");
-            return;
-        }
+        if (!taskId || !newStatus) return;
 
         try {
             const res = await api.patch(`/todos/${taskId}`, { status: newStatus });
@@ -195,42 +208,29 @@ export const useProjectDetail = () => {
         }
     }, []);
 
-    // --- Göreve Katılma / Ayrılma (Assignee) Mantığı ---
+    // --- Göreve Katılma / Ayrılma ---
     const handleToggleJoinTask = useCallback(async (task) => {
-        if (!task || !task._id) {
-            toast.error("Görev bilgisi geçersiz");
-            return;
-        }
-
-        if (!currentUserId) {
-            toast.error("Lütfen giriş yapın.");
+        if (!task?._id || !currentUserId) {
+            toast.error(!task?._id ? "Görev bilgisi geçersiz" : "Lütfen giriş yapın.");
             return;
         }
         
-        // Kullanıcının halihazırda atanıp atanmadığını kontrol eder
         const isAlreadyAssigned = task.assignees?.some(id => 
             (typeof id === 'object' ? id._id : id) === currentUserId
         );
         
         try {
-            let newAssignees;
-            if (isAlreadyAssigned) {
-                // Görevden Ayrılma: Mevcut ID'ler arasından kullanıcıyı çıkar
-                newAssignees = task.assignees
-                    .map(id => (typeof id === 'object' ? id._id : id))
-                    .filter(id => id !== currentUserId);
-            } else {
-                // Göreve Katılma: Mevcut ID listesine kullanıcıyı ekle
-                const currentIds = task.assignees?.map(id => (typeof id === 'object' ? id._id : id)) || [];
-                newAssignees = [...currentIds, currentUserId];
-            }
+            const currentIds = task.assignees?.map(id => (typeof id === 'object' ? id._id : id)) || [];
+            const newAssignees = isAlreadyAssigned
+                ? currentIds.filter(id => id !== currentUserId)
+                : [...currentIds, currentUserId];
 
             const res = await api.patch(`/todos/${task._id}`, { assignees: newAssignees });
             const updatedTask = res.data?.data || res.data;
 
             if (updatedTask && updatedTask._id) {
                 setTasks(prev => prev.map(t => t._id === task._id ? updatedTask : t));
-                isAlreadyAssigned ? toast.success("Görevden ayrıldınız.") : toast.success("Göreve katıldınız!");
+                toast.success(isAlreadyAssigned ? "Görevden ayrıldınız." : "Göreve katıldınız!");
             }
         } catch (err) { 
             console.error("Katılım değiştirme hatası:", err);
@@ -246,23 +246,19 @@ export const useProjectDetail = () => {
             return;
         }
 
-        if (!window.confirm("Projeden çıkarmak istediğinize emin misiniz? Bu kullanıcı atandığı tüm görevlerden de çıkarılacaktır.")) {
-            return;
-        }
+        if (!window.confirm("Projeden çıkarmak istediğinize emin misiniz? Bu kullanıcı atandığı tüm görevlerden de çıkarılacaktır.")) return;
 
         try {
             await api.delete(`/projects/${projectId}/collaborators/${userId}`);
             
-            // Local State Optimizasyonu: Katılımcıyı tüm görevlerin 'assignees' listesinden temizle
             setTasks(prevTasks => prevTasks.map(task => ({
                 ...task,
-                assignees: task.assignees?.filter(id => {
-                    const currentId = (typeof id === 'object' ? id._id : id);
-                    return currentId !== userId;
-                }) || []
+                assignees: task.assignees?.filter(id => 
+                    (typeof id === 'object' ? id._id : id) !== userId
+                ) || []
             })));
 
-            await fetchProjectDetails(); // Proje verilerini tazele
+            await fetchProjectDetails();
             toast.success("Katılımcı ve tüm görev atamaları kaldırıldı.");
         } catch (err) {
             console.error("Katılımcı silme hatası:", err);
@@ -288,14 +284,13 @@ export const useProjectDetail = () => {
         }
     }, [projectId, fetchProjectDetails]);
 
-    // Dışarıya aktarılan arayüz (Public API of the hook)
     return {
         project, 
         tasks, 
         loading,
         error,
         view, 
-        setView, 
+        setView,
         isTaskModalOpen, 
         setIsTaskModalOpen,
         editingTask, 
