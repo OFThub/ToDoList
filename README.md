@@ -44,17 +44,12 @@ Features:
 + Added states (Planing - Ongoing - Done)
 
 ###############################################################################
-+ Kayıt Ekranı (Açık Tema)
- ![Kayıt Ekranı (Açık Tema)](Images/RegisterLightTheme.png)
 
 + Kayıt Ekranı (Koyu Tema)
  ![Kayıt Ekranı (Koyu Tema)](Images/RegisterDarkTheme.png)
 
 + Giriş Ekranı (Açık Tema)
  ![Giriş Ekranı (Açık Tema)](Images/LoginLightTheme.png)
-
-+ Giriş Ekranı (Koyu Tema)
- ![Giriş Ekranı (Koyu Tema)](Images/LoginDarkTheme.png)
 
 + Gösterge Paneli (Açık Tema)
  ![Gösterge Paneli (Açık Tema)](Images/DashboardLightTheme.png)
@@ -79,6 +74,9 @@ Features:
 
 + Durum Oluşturma
  ![Durum Oluşturma](Images/CreateStatus.png)
+
++ To Do Güncelleme
+ ![To Do Güncelleme](Images/EditToDo.png)
 
 + Sürüklenebilir To Do
  ![Sürüklenebilir To Do](Images/Drag.png)
