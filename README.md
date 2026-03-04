@@ -3,6 +3,24 @@ Node.js Learning Journey
 
 ###############################################################################
 
+Projeyi Çalıştırma
+Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları takip edin:
+
+1. Backend'i Başlatın
+Sunucuyu ayağa kaldırmak için terminalde şu komutları çalıştırın:
+
+cd backend
+node server.js
+
+
+2. Frontend'i Başlatın
+Yeni bir terminal sekmesi açın ve arayüzü başlatmak için şu komutları çalıştırın:
+
+cd frontend
+npm run dev
+
+###############################################################################
+
 This project is my first step into Node.js and full-stack development.
 
 I built a real-time To-Do List application to learn:
