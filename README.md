@@ -1,7 +1,7 @@
 # ToDoList
 Node.js Learning Journey
 
-######################################################################
+###############################################################################
 
 This project is my first step into Node.js and full-stack development.
 
@@ -43,4 +43,50 @@ Features:
 + Strengthened authorization logic to ensure secure access to project resources
 + Added states (Planing - Ongoing - Done)
 
-######################################################################
+###############################################################################
++ Kayıt Ekranı (Açık Tema)
+ ![Kayıt Ekranı (Açık Tema)](Images/RegisterLightTheme.png)
+
++ Kayıt Ekranı (Koyu Tema)
+ ![Kayıt Ekranı (Koyu Tema)](Images/RegisterDarkTheme.png)
+
++ Giriş Ekranı (Açık Tema)
+ ![Giriş Ekranı (Açık Tema)](Images/LoginLightTheme.png)
+
++ Giriş Ekranı (Koyu Tema)
+ ![Giriş Ekranı (Koyu Tema)](Images/LoginDarkTheme.png)
+
++ Gösterge Paneli (Açık Tema)
+ ![Gösterge Paneli (Açık Tema)](Images/DashboardLightTheme.png)
+
++ Gösterge Paneli (Koyu Tema)
+ ![Gösterge Paneli (Koyu Tema)](Images/DashboardDarkTheme.png)
+
++ Projeler
+ ![Projeler](Images/Projects.png)
+
++ Kanban Çizelgesi
+ ![Kanban Çizelgesi](Images/KanbanBoard.png)
+
++ Proje Oluşturma
+ ![Proje Oluşturma](Images/CreateProject.png)
+
++ To Do Oluşturma
+ ![To Do Oluşturma](Images/CreateToDo.png)
+
++ To Do Listeleme
+ ![To Do Listeleme](Images/ListToDo.png)
+
++ Durum Oluşturma
+ ![Durum Oluşturma](Images/CreateStatus.png)
+
++ Sürüklenebilir To Do
+ ![Sürüklenebilir To Do](Images/Drag.png)
+
++ Liste Çizelgesi
+ ![Liste Çizelgesi](Images/ListBoard.png)
+
++ Zaman Çizelgesi
+ ![Zaman Çizelgesi](Images/TimeBoard.png)
+
+ ###############################################################################
